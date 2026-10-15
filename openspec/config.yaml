@@ -1,0 +1,19 @@
+schema: spec-driven
+
+context: |
+  Blockout is a free (GPL-3.0) native macOS time-blocking planner: tasks and projects on one side,
+  a calendar on the other; dragging a task onto the calendar writes a busy event into the user's
+  chosen macOS calendar (any account added to macOS Calendar, e.g. Google) immediately.
+  Tech stack: Swift 6, SwiftUI, SwiftData (local store only), EventKit, macOS 15+.
+  A local MCP server (HTTP JSON-RPC on 127.0.0.1) lets AI agents read and write tasks, blocks,
+  drafts and time entries. External integrations (Odoo, meeting notes) are NOT part of Blockout:
+  they live in separate tools that talk to Blockout through the MCP.
+  UI copy is Spanish (neutral) first; code, comments and docs are English.
+  Principles: KISS, DRY, YAGNI. No telemetry, no accounts, no network access except the local MCP and the GitHub release check.
+  Distribution follows the author's Minutes app: self-signed "Blockout Self-Signed" identity, DMG on GitHub Releases.
+  Approved visual reference: local design mockups (kept outside the repository)
+
+rules:
+  tasks:
+    - Every task traces to a requirement or a design decision
+    - Do not include automated tests unless a requirement asks for them
