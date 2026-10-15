@@ -22,8 +22,13 @@ ln -s /Applications "$staging/Applications"
 
 DMG="$ROOT/dist/Blockout-$VERSION.dmg"
 rm -f "$DMG"
-hdiutil create -volname "Blockout $VERSION" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$DMG" > /dev/null
-# hdiutil create is deprecated and once produced an image hdiutil itself rejects; never ship one unverified
+# hdiutil create is deprecated and on newer macOS produces images hdiutil itself rejects; prefer diskutil image
+if diskutil image create from --help > /dev/null 2>&1; then
+  diskutil image create from --format UDZO --volumeName "Blockout $VERSION" "$staging" "$DMG" > /dev/null
+else
+  hdiutil create -volname "Blockout $VERSION" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$DMG" > /dev/null
+fi
+# Never ship an image that installed copies (which mount it with hdiutil or diskutil) cannot open
 if ! hdiutil verify "$DMG" > /dev/null 2>&1; then
   rm -f "$DMG"
   print -u2 "The disk image failed verification; run the script again."
