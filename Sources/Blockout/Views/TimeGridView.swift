@@ -13,7 +13,7 @@ struct TimeGridView: View {
     @Environment(SettingsStore.self) private var settingsStore
 
     static let hourHeight: CGFloat = 52
-    private static let hourColumnWidth: CGFloat = 56
+    private static let hourColumnWidth: CGFloat = PlannerFormat.uses12HourClock ? 68 : 56
 
     private var settings: AppSettings { settingsStore.settings }
     private var firstHour: Int { settings.workdayStartMinutes / 60 }
@@ -80,7 +80,7 @@ struct TimeGridView: View {
         TimelineView(.everyMinute) { context in
             ZStack(alignment: .topTrailing) {
                 ForEach(firstHour..<lastHour, id: \.self) { hour in
-                    Text("\(hour):00")
+                    Text(PlannerFormat.hourLabel(hour))
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Theme.muted)
                         .padding(.trailing, 8)

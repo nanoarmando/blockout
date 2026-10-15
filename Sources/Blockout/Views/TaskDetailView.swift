@@ -152,7 +152,7 @@ struct TaskDetailView: View {
                     if let due = task.dueDate {
                         DatePicker("Vence", selection: Binding(get: { due }, set: { task.dueDate = $0 }), displayedComponents: .date)
                             .labelsHidden()
-                            .environment(\.locale, Locale(identifier: "es"))
+                            .environment(\.locale, .planner)
                         Button("Quitar") { task.dueDate = nil }.buttonStyle(.link)
                     } else {
                         Button("Agregar fecha") { task.dueDate = Calendar.planner.startOfDay(for: .now) }.buttonStyle(.link)
@@ -297,7 +297,7 @@ struct TaskDetailView: View {
             .accessibilityLabel("Borrar registro")
         }
         .font(.system(size: 13))
-        .environment(\.locale, Locale(identifier: "es"))
+        .environment(\.locale, .planner)
     }
 
     /// Edits the start or end of an entry; an end before its start is rejected and the previous value is kept.

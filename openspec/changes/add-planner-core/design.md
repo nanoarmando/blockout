@@ -31,6 +31,9 @@ Tasks and blocks are `Transferable` (task id / block id). Day columns compute th
 ### D6. Project colors and appearance
 A fixed palette of eight project colors with light (dark text on tint) and dark (tinted dark fill, light text) variants, assigned in rotation. App colors defined as asset/semantic colors following the system appearance. Fonts: system font in native chrome; the calendar keeps tabular digits.
 
+### D6c. Time format follows macOS (approved)
+Texts stay in Spanish, but times use the 12- or 24-hour clock the user set in macOS: `Locale.planner` (Spanish with the system hour cycle) for date pickers and the planner calendar, and `PlannerFormat.time`/`hourLabel` for labels ("4:00 pm" / "16:00", "9 am" / "9:00"). Spec examples are written with the 24-hour clock. MCP times stay ISO 8601.
+
 ### D6b. Icons (chosen: "B1 · línea de ahora")
 App icon: graphite rounded square with three staggered time bars; the middle bar (current block) in teal `#14B8A6`, the others dark gray, crossed by the red current-time line (`#FF5A5F`) with a dot on top. Menu bar: a monochrome 16-pt template image of the same three bars and vertical line, so macOS tints it for light and dark menu bars. Source SVGs live in `Resources/` and the build script generates `AppIcon.icns`. Reference: the icon options mockup.
 

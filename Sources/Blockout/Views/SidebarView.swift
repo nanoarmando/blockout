@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 enum TaskFilter: Hashable {
-    case all, today, unscheduled, scheduled, overdue
+    case all, today, unscheduled, scheduled, overdue, completed
     case project(UUID)
     case source(String)
 
@@ -13,6 +13,7 @@ enum TaskFilter: Hashable {
         case .unscheduled: !task.isScheduled
         case .scheduled: task.isScheduled
         case .overdue: task.isOverdue
+        case .completed: task.status == .done
         case .project(let id): task.project?.id == id
         case .source(let label): task.sourceLabel == label
         }
@@ -22,6 +23,7 @@ enum TaskFilter: Hashable {
 struct SidebarView: View {
     @Binding var filter: TaskFilter
     let openTasks: [PlannerTask]
+    let completedCount: Int
     let projects: [Project]
 
     @State private var showsAllProjects = false
@@ -29,7 +31,7 @@ struct SidebarView: View {
 
     private static let visibleProjectCount = 5
     private static let fixedFilters: [(TaskFilter, String)] = [
-        (.all, "Todas"), (.today, "Hoy"), (.unscheduled, "Sin agendar"), (.scheduled, "Agendadas"), (.overdue, "Vencidas"),
+        (.all, "Todas"), (.today, "Hoy"), (.unscheduled, "Sin agendar"), (.scheduled, "Agendadas"), (.overdue, "Vencidas"), (.completed, "Completadas"),
     ]
 
     var body: some View {
@@ -138,7 +140,7 @@ struct SidebarView: View {
     }
 
     private func count(_ item: TaskFilter) -> Int {
-        openTasks.count(where: item.matches)
+        item == .completed ? completedCount : openTasks.count(where: item.matches)
     }
 
     private func countColor(_ item: TaskFilter) -> Color {

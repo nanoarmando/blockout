@@ -4,7 +4,7 @@ extension Calendar {
     /// Gregorian calendar with weeks starting on Monday, used everywhere in the planner.
     static let planner: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "es")
+        calendar.locale = .planner
         calendar.firstWeekday = 2
         return calendar
     }()
@@ -15,8 +15,20 @@ extension Calendar {
     }
 }
 
-/// Spanish date and duration labels matching the mockup ("Jue 15 oct", "16:00", "1.5h").
+extension Locale {
+    /// Spanish texts with the hour cycle the user chose in macOS (12 or 24 hours), for date pickers and the calendar.
+    static let planner: Locale = {
+        var components = Locale.Components(identifier: "es")
+        components.hourCycle = PlannerFormat.uses12HourClock ? .oneToTwelve : .zeroToTwentyThree
+        return Locale(components: components)
+    }()
+}
+
+/// Spanish date and duration labels matching the mockup ("Jue 15 oct", "16:00" or "4:00 pm", "1.5h").
 enum PlannerFormat {
+    /// Whether macOS shows times with am/pm, from the system locale and its 12/24-hour setting.
+    static let uses12HourClock = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current)?.contains("a") ?? false
+
     private static let weekdays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
     private static let months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
     private static let fullMonths = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -31,7 +43,15 @@ enum PlannerFormat {
 
     static func time(_ date: Date) -> String {
         let parts = calendar.dateComponents([.hour, .minute], from: date)
-        return String(format: "%d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+        let hour = parts.hour ?? 0, minute = parts.minute ?? 0
+        guard uses12HourClock else { return String(format: "%d:%02d", hour, minute) }
+        return String(format: "%d:%02d %@", hour % 12 == 0 ? 12 : hour % 12, minute, hour < 12 ? "am" : "pm")
+    }
+
+    /// Hour column label: "9:00", or "9 am" with a 12-hour clock.
+    static func hourLabel(_ hour: Int) -> String {
+        guard uses12HourClock else { return "\(hour):00" }
+        return "\(hour % 12 == 0 ? 12 : hour % 12) \(hour < 12 ? "am" : "pm")"
     }
 
     static func timeRange(_ start: Date, _ end: Date) -> String { "\(time(start)) – \(time(end))" }

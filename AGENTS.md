@@ -52,6 +52,6 @@
 - Do not add third-party dependencies or network access (only the local MCP and the GitHub release check).
 - When testing from a debug build, set `BLOCKOUT_STORE_DIR` to a scratch folder so the real store is untouched (redirecting `HOME` does not work: `URL.applicationSupportDirectory` ignores it), and avoid `schedule_task`, draft acceptance and "+15 min": they write real calendar events.
 - Integrations with Odoo or meeting notes never go into Blockout; they live in external tools that use the MCP.
-- UI copy in neutral Spanish (no regional forms such as "filtrá" or "arrastrá"); code, comments and docs in English.
+- UI copy in neutral Spanish (no regional forms such as "filtrá" or "arrastrá"); code, comments and docs in English. Times follow the macOS 12/24-hour setting: use `Locale.planner` for pickers and `PlannerFormat.time`/`hourLabel` for labels, never a hard-coded "es" locale or "%d:00".
 - Localization is planned (README Roadmap) but not set up: there is no String Catalog and texts are literals. Until it is planned as its own OpenSpec change, prefer SwiftUI literals (`Text("…")`, `Button("…")`), which become localization keys automatically, over building user-facing text as `String`.
 - Keep README.md (humans) and AGENTS.md (agents) in sync.

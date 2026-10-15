@@ -5,8 +5,13 @@ import UniformTypeIdentifiers
 /// The filter-and-create input and the "Sin agendar" / "Agendadas" groups. Dropping a block here unschedules it.
 struct TaskListView: View {
     let tasks: [PlannerTask]
+    /// Done tasks matching the sidebar filter; shown in "Completadas" when toggled on or with that filter.
+    let completedTasks: [PlannerTask]
+    let onlyCompleted: Bool
     let projects: [Project]
     let openTask: (PlannerTask) -> Void
+
+    @AppStorage("showsCompletedTasks") private var showsCompleted = false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(CalendarService.self) private var calendarService
@@ -19,13 +24,13 @@ struct TaskListView: View {
 
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
 
-    private var matchingTasks: [PlannerTask] {
-        guard !needle.isEmpty else { return tasks }
-        return tasks.filter { task in
-            [task.title, task.project?.name, task.sourceLabel, task.externalRefLabel]
-                .compactMap { $0 }
-                .contains { $0.localizedCaseInsensitiveContains(needle) }
-        }
+    private var matchingTasks: [PlannerTask] { tasks.filter(matchesQuery) }
+
+    private func matchesQuery(_ task: PlannerTask) -> Bool {
+        guard !needle.isEmpty else { return true }
+        return [task.title, task.project?.name, task.sourceLabel, task.externalRefLabel]
+            .compactMap { $0 }
+            .contains { $0.localizedCaseInsensitiveContains(needle) }
     }
 
     var body: some View {
@@ -33,20 +38,25 @@ struct TaskListView: View {
             input
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    let unscheduled = tasks.filter { !$0.isScheduled }
-                    let scheduled = tasks.filter(\.isScheduled)
-                    group(
-                        "Sin agendar",
-                        all: unscheduled,
-                        hint: "Arrastra al calendario",
-                        sort: { ($0.urgency, $0.createdAt) > ($1.urgency, $1.createdAt) }
-                    )
-                    group(
-                        "Agendadas",
-                        all: scheduled,
-                        hint: scheduled.count == 1 ? "1 tarea" : "\(scheduled.count) tareas",
-                        sort: { ($0.nextBlock?.start ?? .distantFuture) < ($1.nextBlock?.start ?? .distantFuture) }
-                    )
+                    if !onlyCompleted {
+                        let unscheduled = tasks.filter { !$0.isScheduled }
+                        let scheduled = tasks.filter(\.isScheduled)
+                        group(
+                            "Sin agendar",
+                            all: unscheduled,
+                            hint: "Arrastra al calendario",
+                            sort: { ($0.urgency, $0.createdAt) > ($1.urgency, $1.createdAt) }
+                        )
+                        group(
+                            "Agendadas",
+                            all: scheduled,
+                            hint: Self.taskCount(scheduled.count),
+                            sort: { ($0.nextBlock?.start ?? .distantFuture) < ($1.nextBlock?.start ?? .distantFuture) }
+                        )
+                    }
+                    if onlyCompleted || showsCompleted {
+                        group("Completadas", all: completedTasks, hint: Self.taskCount(completedTasks.count), sort: { $0.createdAt > $1.createdAt })
+                    }
                 }
             }
         }
@@ -83,7 +93,16 @@ struct TaskListView: View {
 
     private var input: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Buscar o crear tarea").font(.system(size: 12)).foregroundStyle(Theme.muted)
+            HStack {
+                Text("Buscar o crear tarea").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                Spacer()
+                Button { showsCompleted.toggle() } label: {
+                    Image(systemName: showsCompleted ? "checkmark.circle.fill" : "checkmark.circle").font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(showsCompleted ? Theme.accentText : Theme.muted)
+                .help(showsCompleted ? "Ocultar completadas" : "Mostrar completadas")
+            }
             TextField("Filtra o escribe y presiona Enter para crear", text: $query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
@@ -115,7 +134,7 @@ struct TaskListView: View {
 
     @ViewBuilder
     private func group(_ title: String, all: [PlannerTask], hint: String, sort: (PlannerTask, PlannerTask) -> Bool) -> some View {
-        let shown = all.filter { task in matchingTasks.contains { $0.id == task.id } }.sorted(by: sort)
+        let shown = all.filter(matchesQuery).sorted(by: sort)
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title).font(.system(size: 13, weight: .semibold))
@@ -198,10 +217,14 @@ private struct TaskRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            CompletionButton(isDone: false) { calendarService.complete(task) }
+            CompletionButton(isDone: task.status == .done) {
+                // Unchecking a completed task reopens it, like the task detail
+                if task.status == .done { task.status = .todo } else { calendarService.complete(task) }
+            }
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.title).font(.system(size: 14)).lineSpacing(2)
+                    .foregroundStyle(task.status == .done ? Theme.muted : Theme.ink)
                 meta
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -241,4 +264,8 @@ private struct TaskRow: View {
             .foregroundStyle(Theme.muted)
         }
     }
+}
+
+extension TaskListView {
+    static func taskCount(_ count: Int) -> String { count == 1 ? "1 tarea" : "\(count) tareas" }
 }

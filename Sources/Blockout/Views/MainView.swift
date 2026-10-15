@@ -24,9 +24,14 @@ struct MainView: View {
         VStack(spacing: 0) {
             CalendarHeader(range: $range)
             HStack(spacing: 0) {
-                SidebarView(filter: $filter, openTasks: openTasks, projects: projects)
+                SidebarView(filter: $filter, openTasks: openTasks, completedCount: allTasks.count { !$0.isOpen }, projects: projects)
                 Theme.line.frame(width: 1)
-                TaskListView(tasks: openTasks.filter(filter.matches), projects: projects) { selectedTask = $0 }
+                TaskListView(
+                    tasks: openTasks.filter(filter.matches),
+                    completedTasks: allTasks.filter { !$0.isOpen && filter.matches($0) },
+                    onlyCompleted: filter == .completed,
+                    projects: projects
+                ) { selectedTask = $0 }
                 Theme.line.frame(width: 1)
                 calendarArea
             }

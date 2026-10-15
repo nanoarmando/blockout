@@ -42,7 +42,7 @@ A "+" button next to the "Proyectos" heading SHALL open a project sheet to creat
 - **THEN** the sheet shows that the name is already in use and nothing changes
 
 ### Requirement: Task list groups
-The task list SHALL show open tasks in two groups: "Sin agendar" (no block today or later) and "Agendadas" (at least one block today or later, showing the next block's day and time). Completed tasks SHALL NOT appear in either group.
+The task list SHALL show open tasks in two groups: "Sin agendar" (no block today or later) and "Agendadas" (at least one block today or later, showing the next block's day and time). Completed tasks SHALL NOT appear in either group; they are hidden unless the user shows them (see "Show completed tasks").
 
 #### Scenario: Task whose only block is in the past
 - **WHEN** an open task's only block ended yesterday
@@ -53,7 +53,7 @@ The task list SHALL show open tasks in two groups: "Sin agendar" (no block today
 - **THEN** the task status becomes "hecha" and it leaves the list
 
 ### Requirement: Sidebar filters
-The sidebar SHALL offer the filters Todas, Hoy (a block today or due today), Sin agendar, Agendadas and Vencidas (open and past due date), each with its count, plus one filter per project and one per source label. Selecting a filter SHALL restrict the task list to matching tasks.
+The sidebar SHALL offer the filters Todas, Hoy (a block today or due today), Sin agendar, Agendadas, Vencidas (open and past due date) and Completadas (done tasks only), each with its count, plus one filter per project and one per source label. Selecting a filter SHALL restrict the task list to matching tasks.
 
 #### Scenario: Overdue filter
 - **WHEN** an open task was due yesterday and the user selects "Vencidas"
@@ -113,3 +113,18 @@ Right-clicking a task row in the list SHALL open a context menu with "Abrir", wh
 #### Scenario: Cancel deletion
 - **WHEN** the user chooses "Eliminar…" and then "Cancelar"
 - **THEN** the task and its blocks remain unchanged
+
+### Requirement: Show completed tasks
+A toggle icon next to the "Buscar o crear tarea" label SHALL show or hide completed tasks in the list. While shown, they SHALL appear after the other groups in a "Completadas" group, newest first, with a checked completion control; unchecking it SHALL reopen the task as "Por hacer". The toggle state SHALL persist across restarts. Selecting the "Completadas" sidebar filter SHALL show only completed tasks regardless of the toggle. Completed tasks SHALL keep being excluded from the other filters' counts.
+
+#### Scenario: Show completed
+- **WHEN** the user activates the toggle
+- **THEN** a "Completadas" group with the completed tasks appears below "Agendadas"
+
+#### Scenario: Reopen a completed task
+- **WHEN** the user unchecks a task in "Completadas"
+- **THEN** the task becomes "Por hacer" and moves back to its open group
+
+#### Scenario: Completadas filter
+- **WHEN** the user selects "Completadas" in the sidebar with the toggle off
+- **THEN** the list shows only the completed tasks

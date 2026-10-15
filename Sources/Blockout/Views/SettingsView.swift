@@ -194,7 +194,7 @@ struct SettingsView: View {
             Text(title).font(.system(size: 12)).foregroundStyle(Theme.muted)
             DatePicker(title, selection: date, displayedComponents: .hourAndMinute)
                 .labelsHidden()
-                .environment(\.locale, Locale(identifier: "es"))
+                .environment(\.locale, .planner)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

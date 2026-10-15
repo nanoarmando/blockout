@@ -4,9 +4,9 @@ Blockout is a free (GPL-3.0) time-blocking planner for macOS. You keep your task
 
 ## Features
 
-- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
+- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Completed tasks are hidden; the check icon above the input shows them (uncheck one to reopen it). Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
 - **One input to filter and create**: typing filters the list; Enter creates a task. A trailing `2h` sets the estimate, a trailing `!!` sets the urgency, and an existing project name in the text assigns the project.
-- **Sidebar filters**: Todas, Hoy, Sin agendar, Agendadas, Vencidas, plus one filter per project and per source.
+- **Sidebar filters**: Todas, Hoy, Sin agendar, Agendadas, Vencidas, Completadas, plus one filter per project and per source.
 - **Calendar** in Día, Días (2 to 7), Semana and Mes views, showing the macOS calendars you choose, the free time per day and a red current-time line.
 - **Blocks are real events**: dropping a task creates an event in the destination calendar at once, titled "[Proyecto] Título" (the task keeps its own title). Renaming the task or its project updates all its events. Move, resize, Option-drag to duplicate, or drag back to the list to unschedule. Changes made in Calendar or on the web are reflected back.
 - **Local MCP server** for AI agents and automations (for example Claude or your own scripts) to read and change projects, tasks, the schedule and blocks.

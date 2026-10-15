@@ -47,6 +47,7 @@
 - [x] 7.4 Add the task row context menu (Abrir, Urgencia submenu, Eliminar…) and task deletion with confirmation, sharing one deletion path with the MCP `delete_task` (task-management)
 - [x] 7.5 Replace the sidebar "Nuevo proyecto" field with a "+" button and add a project sheet (name, palette color) for creating and, from the project context menu, editing projects (task-management)
 - [x] 7.6 Title blocks and their events "[Proyecto] Título" and retitle all of a task's events when its title, project or project name changes, from the UI and the MCP (D3b; block-scheduling, calendar-view)
+- [x] 7.7 Add the show-completed toggle above the input and the "Completadas" sidebar filter with a reopenable "Completadas" group (task-management)
 
 ## 8. Verification
 
