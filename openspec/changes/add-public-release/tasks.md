@@ -12,8 +12,8 @@
 ## 3. Publication
 
 - [x] 3.1 Complete the README (install, quarantine step, build from source, permissions, MCP, privacy including the GitHub check) and AGENTS; add the "Releases (maintainers)" section
-- [ ] 3.2 Create the public GitHub repository `nanoarmando/blockout` and push
-- [ ] 3.3 Publish release `1.0.0` with `gh release create` and the DMG
+- [x] 3.2 Create the public GitHub repository `nanoarmando/blockout` and push
+- [x] 3.3 Publish release `1.0.0` with `gh release create` and the DMG
 
 ## 4. Verification
 

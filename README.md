@@ -129,7 +129,7 @@ The plan lives in `openspec/changes/`, in four stages:
 1. `add-planner-core`: tasks, projects and the calendar planner (implemented, pending manual verification).
 2. `add-mcp-server`: local MCP server for AI agents and automations, and draft plans to accept or discard (implemented, pending manual verification).
 3. `add-time-tracking`: start prompts, a timer in the menu bar and editable time entries (implemented, pending manual verification).
-4. `add-public-release`: signed DMG releases on GitHub and in-app updates (implemented; the public repository and release 1.0.0 are not published yet).
+4. `add-public-release`: signed DMG releases on GitHub and in-app updates (released as 1.0.0).
 
 ## Roadmap
 

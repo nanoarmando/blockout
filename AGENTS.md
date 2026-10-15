@@ -47,7 +47,7 @@
 
 ## Rules
 
-- Do not implement any change before the user approves its spec summary (OpenSpec workflow). Implement stages in order. All four stages are implemented; manual verification (1: 8.1, 2: 5.2, 3: 6.1, 4: 4.1) and the publication of the public repository and release 1.0.0 (4: 3.2, 3.3) are pending. Never create the public repository, push or publish a release without the user's explicit confirmation.
+- Do not implement any change before the user approves its spec summary (OpenSpec workflow). Implement stages in order. All four stages are implemented; manual verification (1: 8.1, 2: 5.2, 3: 6.1, 4: 4.1) are pending; 1.0.0 is published at github.com/nanoarmando/blockout. Never push or publish a release without the user's explicit confirmation, and never commit client data, real calendar data or references to the author's private tools (the repository is public).
 - Do not add automated tests unless a requirement asks for them.
 - Do not add third-party dependencies or network access (only the local MCP and the GitHub release check).
 - When testing from a debug build, set `BLOCKOUT_STORE_DIR` to a scratch folder so the real store is untouched (redirecting `HOME` does not work: `URL.applicationSupportDirectory` ignores it), and avoid `schedule_task`, draft acceptance and "+15 min": they write real calendar events.
