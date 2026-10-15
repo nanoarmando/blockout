@@ -33,10 +33,9 @@ extension PlannerTask {
         return dueDate < Calendar.planner.startOfDay(for: .now)
     }
 
+    /// Has a block today ("Hoy"); the due date does not count.
     var isForToday: Bool {
-        let calendar = Calendar.planner
-        if let dueDate, calendar.isDateInToday(dueDate) { return true }
-        return confirmedBlocks.contains { calendar.isDateInToday($0.start) }
+        confirmedBlocks.contains { Calendar.planner.isDateInToday($0.start) }
     }
 
     /// The label shown where the list and detail mention where the task came from.

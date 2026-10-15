@@ -148,8 +148,7 @@ struct TaskListView: View {
                     .onTapGesture { openTask(task) }
                     .contextMenu { contextMenu(for: task) }
                     .onDrag {
-                        dragState.payload = .task(task.id)
-                        return NSItemProvider(object: task.id.uuidString as NSString)
+                        dragState.begin(.task(task.id))
                     }
             }
         }
@@ -195,10 +194,15 @@ private struct UnscheduleDropDelegate: DropDelegate {
         return nil
     }
 
-    func validateDrop(info: DropInfo) -> Bool { blockID != nil }
-    func dropEntered(info: DropInfo) { isTargeted = true }
+    func validateDrop(info: DropInfo) -> Bool { info.hasItemsConforming(to: [.plainText]) }
+    func dropEntered(info: DropInfo) { dragState.load(from: info) }
     func dropExited(info: DropInfo) { isTargeted = false }
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    /// Only blocks can be dropped here; the payload may arrive a moment after entering.
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        isTargeted = blockID != nil
+        return DropProposal(operation: blockID == nil ? .forbidden : .move)
+    }
 
     func performDrop(info: DropInfo) -> Bool {
         defer {

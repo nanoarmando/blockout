@@ -23,7 +23,7 @@ Time-based views SHALL show events from the calendars the user reads as read-onl
 - **THEN** the event does not move
 
 ### Requirement: Free time per day
-Each day header in time-based views SHALL show the free time left inside the working hours, counting events and blocks once even when they overlap. Weekend days with no working hours SHALL show "Fin de semana".
+Each day header in time-based views SHALL show the free time left inside the working hours, counting busy events and blocks once even when they overlap; events marked as free (available) SHALL NOT count. Weekend days with no working hours SHALL show "Fin de semana".
 
 #### Scenario: Overlapping items
 - **WHEN** working hours are 8:00 to 18:00 and the day has a 9:00 to 10:00 event and a 9:30 to 10:30 block

@@ -10,8 +10,13 @@ struct CalendarEvent: Identifiable {
     let start: Date
     let end: Date
     let isAllDay: Bool
+    /// `false` for events marked as free (available): they are shown but never count as busy time.
+    let isBusy: Bool
 
     var interval: DateInterval { DateInterval(start: start, end: max(start, end)) }
+
+    /// Takes time in placement and free-time computations: timed and not marked as free.
+    var takesTime: Bool { !isAllDay && isBusy }
 }
 
 struct CalendarInfo: Identifiable, Hashable {
@@ -136,7 +141,8 @@ final class CalendarService {
                     title: event.title ?? "",
                     start: event.startDate,
                     end: event.endDate,
-                    isAllDay: event.isAllDay
+                    isAllDay: event.isAllDay,
+                    isBusy: event.availability != .free
                 )
             }
     }
@@ -160,7 +166,7 @@ final class CalendarService {
         let calendar = Calendar.planner
         let start = calendar.startOfDay(for: date)
         let day = DateInterval(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400))
-        return events(in: day).filter { !$0.isAllDay }.map(\.interval) + blocks(in: day).map(\.interval)
+        return events(in: day).filter(\.takesTime).map(\.interval) + blocks(in: day).map(\.interval)
     }
 
     /// Whether `interval` lies inside the working hours of its day without overlapping events or confirmed blocks.
@@ -298,7 +304,7 @@ final class CalendarService {
         let workdayEnd = settingsStore.settings.workday(containing: block.start)?.end ?? day.end
         let result = BlockCascade.cascade(
             blocks: later.map { BlockCascade.Item(id: $0.id, interval: $0.interval) },
-            events: events(in: day).filter { !$0.isAllDay }.map(\.interval),
+            events: events(in: day).filter(\.takesTime).map(\.interval),
             from: newEnd,
             workdayEnd: workdayEnd
         )

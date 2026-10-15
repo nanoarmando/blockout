@@ -12,7 +12,10 @@ struct TimeGridView: View {
 
     @Environment(SettingsStore.self) private var settingsStore
 
-    static let hourHeight: CGFloat = 52
+    /// Hours stretch to fill the visible height for the configured working hours, never below this.
+    static let minHourHeight: CGFloat = 44
+    @State private var availableHeight: CGFloat = 0
+    private var hourHeight: CGFloat { max(Self.minHourHeight, availableHeight / CGFloat(lastHour - firstHour)) }
     private static let hourColumnWidth: CGFloat = PlannerFormat.uses12HourClock ? 68 : 56
 
     private var settings: AppSettings { settingsStore.settings }
@@ -47,7 +50,9 @@ struct TimeGridView: View {
                         )
                     }
                 }
+                .environment(\.hourHeight, hourHeight)
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
         }
         .background(Theme.card)
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -84,9 +89,9 @@ struct TimeGridView: View {
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Theme.muted)
                         .padding(.trailing, 8)
-                        .offset(y: CGFloat(hour - firstHour) * Self.hourHeight + 2)
+                        .offset(y: CGFloat(hour - firstHour) * hourHeight + 2)
                 }
-                if let y = Self.offset(of: context.date, firstHour: firstHour, lastHour: lastHour) {
+                if let y = Self.offset(of: context.date, firstHour: firstHour, lastHour: lastHour, hourHeight: hourHeight) {
                     Text(PlannerFormat.time(context.date))
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white)
@@ -97,7 +102,7 @@ struct TimeGridView: View {
                         .offset(y: y - 8)
                 }
             }
-            .frame(width: Self.hourColumnWidth, height: CGFloat(lastHour - firstHour) * Self.hourHeight, alignment: .topTrailing)
+            .frame(width: Self.hourColumnWidth, height: CGFloat(lastHour - firstHour) * hourHeight, alignment: .topTrailing)
         }
     }
 
@@ -111,12 +116,12 @@ struct TimeGridView: View {
 
     private func freeLabel(_ day: Date) -> String {
         guard let workday = settings.workday(containing: day) else { return "Fin de semana" }
-        let busy = timedEvents(on: day).map(\.interval) + blocks(on: day).map(\.interval)
+        let busy = timedEvents(on: day).filter(\.isBusy).map(\.interval) + blocks(on: day).map(\.interval)
         return PlannerFormat.free(SlotFinder.freeDuration(in: workday, busy: busy))
     }
 
     /// Vertical position of a time of day, or `nil` when it is outside the visible hours.
-    static func offset(of date: Date, firstHour: Int, lastHour: Int) -> CGFloat? {
+    static func offset(of date: Date, firstHour: Int, lastHour: Int, hourHeight: CGFloat) -> CGFloat? {
         let parts = Calendar.planner.dateComponents([.hour, .minute], from: date)
         let minutes = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
         guard minutes >= firstHour * 60, minutes <= lastHour * 60 else { return nil }
@@ -143,7 +148,7 @@ private struct DayColumn: View {
     @Environment(CalendarService.self) private var calendarService
     @Environment(DragState.self) private var dragState
 
-    private var hourHeight: CGFloat { TimeGridView.hourHeight }
+    @Environment(\.hourHeight) private var hourHeight
     private var height: CGFloat { CGFloat(lastHour - firstHour) * hourHeight }
 
     var body: some View {
@@ -204,7 +209,7 @@ private struct DayColumn: View {
 
     private var nowLine: some View {
         TimelineView(.everyMinute) { context in
-            if let y = TimeGridView.offset(of: context.date, firstHour: firstHour, lastHour: lastHour) {
+            if let y = TimeGridView.offset(of: context.date, firstHour: firstHour, lastHour: lastHour, hourHeight: hourHeight) {
                 let isToday = Calendar.planner.isDate(context.date, inSameDayAs: day)
                 ZStack(alignment: .leading) {
                     Rectangle().fill(isToday ? Theme.now : Theme.nowSoft).frame(height: isToday ? 2 : 1)
@@ -249,11 +254,14 @@ private struct DayColumn: View {
         case .task(let id):
             guard let task = tasks.first(where: { $0.id == id }),
                   let workday = settingsStore.settings.workday(containing: day) else { return nil }
+            // New blocks land exactly under the pointer; overlapping busy time is a conflict, not a shift
             let duration = TimeInterval(settingsStore.settings.blockMinutes(for: task) * 60)
-            let busy = events.map(\.interval) + blocks.map(\.interval)
-            guard let start = SlotFinder.nextFreeStart(from: snappedStart(at: location, duration: duration), duration: duration, busy: busy, workday: workday)
-            else { return nil }
-            return DropPreview(day: day, start: start, end: start.addingTimeInterval(duration), title: task.blockTitle)
+            let start = max(snappedStart(at: location, duration: duration), workday.start)
+            guard start.addingTimeInterval(duration) <= workday.end else { return nil }
+            let range = DateInterval(start: start, duration: duration)
+            let busy = events.filter(\.isBusy).map(\.interval) + blocks.map(\.interval)
+            let conflict = busy.contains { $0.start < range.end && $0.end > range.start }
+            return DropPreview(day: day, start: start, end: range.end, title: task.blockTitle, conflict: conflict)
         case .block(let id):
             // Moving an existing block is deliberate, so it may overlap other items.
             guard let block = allBlocks.first(where: { $0.id == id }) else { return nil }
@@ -267,7 +275,7 @@ private struct DayColumn: View {
 
     func performDrop(at location: CGPoint) -> Bool {
         defer { dragState.finish() }
-        guard let preview = preview(at: location) else { return false }
+        guard let preview = preview(at: location), !preview.conflict else { return false }
         switch dragState.payload {
         case .task(let id):
             guard let task = tasks.first(where: { $0.id == id }) else { return false }
@@ -286,7 +294,7 @@ private struct DayColumn: View {
     func updatePreview(at location: CGPoint) -> DropProposal {
         let preview = preview(at: location)
         if dragState.preview != preview { dragState.preview = preview }
-        guard preview != nil else { return DropProposal(operation: .forbidden) }
+        guard let preview, !preview.conflict else { return DropProposal(operation: .forbidden) }
         return DropProposal(operation: NSEvent.modifierFlags.contains(.option) ? .copy : .move)
     }
 
@@ -296,13 +304,14 @@ private struct DayColumn: View {
         }
     }
 
-    var isDragging: Bool { dragState.payload != nil }
+    func loadPayload(from info: DropInfo) { dragState.load(from: info) }
 }
 
 private struct DayDropDelegate: DropDelegate {
     let column: DayColumn
 
-    func validateDrop(info: DropInfo) -> Bool { column.isDragging }
+    func validateDrop(info: DropInfo) -> Bool { info.hasItemsConforming(to: [.plainText]) }
+    func dropEntered(info: DropInfo) { column.loadPayload(from: info) }
     func dropUpdated(info: DropInfo) -> DropProposal? { column.updatePreview(at: info.location) }
     func dropExited(info: DropInfo) { column.clearPreview() }
     func performDrop(info: DropInfo) -> Bool { column.performDrop(at: info.location) }
@@ -333,14 +342,21 @@ private struct PreviewItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(preview.title).font(.system(size: 11, weight: .medium)).lineLimit(1)
-            Text("Soltar · \(PlannerFormat.timeRange(preview.start, preview.end))").font(.system(size: 11)).opacity(0.85)
+            if preview.conflict {
+                Text("No se puede planificar aquí porque coincide con otra actividad")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Soltar · \(PlannerFormat.timeRange(preview.start, preview.end))").font(.system(size: 11)).opacity(0.85)
+            }
         }
         .foregroundStyle(Theme.ink)
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.accent, style: StrokeStyle(lineWidth: 2, dash: [5, 3])))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(preview.conflict ? Theme.danger : Theme.accent, style: StrokeStyle(lineWidth: 2, dash: [5, 3])))
         .shadow(color: .black.opacity(0.22), radius: 8, y: 6)
         .clipped()
         .allowsHitTesting(false)
@@ -354,6 +370,7 @@ private struct BlockItem: View {
 
     @Environment(CalendarService.self) private var calendarService
     @Environment(DragState.self) private var dragState
+    @Environment(\.hourHeight) private var hourHeight
     @State private var resizeMinutes = 0
 
     private var colorIndex: Int? { block.task?.project?.colorIndex }
@@ -374,14 +391,13 @@ private struct BlockItem: View {
         .padding(.horizontal, 6)
         .padding(.vertical, isShort ? 1 : 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .frame(height: max(16, height + CGFloat(resizeMinutes) / 60 * TimeGridView.hourHeight))
+        .frame(height: max(16, height + CGFloat(resizeMinutes) / 60 * hourHeight))
         .background(ProjectPalette.fill(colorIndex), in: RoundedRectangle(cornerRadius: 6))
         .overlay(alignment: .bottom) { resizeHandle }
         .contentShape(Rectangle())
         .onTapGesture { if let task = block.task { openTask(task) } }
         .onDrag {
-            dragState.payload = .block(block.id)
-            return NSItemProvider(object: block.id.uuidString as NSString)
+            dragState.begin(.block(block.id))
         }
         .help("\(block.task?.blockTitle ?? "") · \(timeLabel)")
     }
@@ -394,17 +410,16 @@ private struct BlockItem: View {
 
     private var resizeHandle: some View {
         Color.clear
-            .frame(height: 6)
+            .frame(height: 8)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
-            .onHover { inside in
-                if inside { NSCursor.resizeUpDown.push() } else { NSCursor.pop() }
-            }
+            .pointerStyle(.rowResize)
             .highPriorityGesture(
-                DragGesture(minimumDistance: 2)
+                // Global coordinates: the handle moves while the block grows, so local translation would feed back
+                DragGesture(minimumDistance: 2, coordinateSpace: .global)
                     .onChanged { value in
                         let minimum = SlotFinder.stepMinutes - Int(block.end.timeIntervalSince(block.start) / 60)
-                        let raw = Int((value.translation.height / TimeGridView.hourHeight * 60).rounded())
+                        let raw = Int((value.translation.height / hourHeight * 60).rounded())
                         resizeMinutes = max(minimum, (raw / SlotFinder.stepMinutes) * SlotFinder.stepMinutes)
                     }
                     .onEnded { _ in
@@ -490,4 +505,9 @@ private struct HatchPattern: View {
         }
         .allowsHitTesting(false)
     }
+}
+
+extension EnvironmentValues {
+    /// Height of one hour in the time grid, computed by `TimeGridView` from the visible height.
+    @Entry var hourHeight: CGFloat = 44
 }

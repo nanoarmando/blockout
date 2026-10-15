@@ -48,6 +48,7 @@
 - [x] 7.5 Replace the sidebar "Nuevo proyecto" field with a "+" button and add a project sheet (name, palette color) for creating and, from the project context menu, editing projects (task-management)
 - [x] 7.6 Title blocks and their events "[Proyecto] Título" and retitle all of a task's events when its title, project or project name changes, from the UI and the MCP (D3b; block-scheduling, calendar-view)
 - [x] 7.7 Add the show-completed toggle above the input and the "Completadas" sidebar filter with a reopenable "Completadas" group (task-management)
+- [x] 7.8 Place dropped tasks exactly at the pointer with a conflict state and message instead of moving to the next free slot; ignore free-availability events for placement and free time (block-scheduling, calendar-view)
 
 ## 8. Verification
 

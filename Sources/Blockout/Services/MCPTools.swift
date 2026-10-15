@@ -221,7 +221,7 @@ final class MCPTools {
             let dayEvents = events.filter { onDay($0.start) }
             let dayBlocks = blocks.filter { onDay($0.start) }
             let workday = settingsStore.settings.workday(containing: day)
-            let busy = dayEvents.filter { !$0.isAllDay }.map(\.interval) + dayBlocks.map(\.interval)
+            let busy = dayEvents.filter(\.takesTime).map(\.interval) + dayBlocks.map(\.interval)
             return [
                 "date": MCPDate.day(day),
                 "working_hours": workday.map { ["start": MCPDate.time($0.start), "end": MCPDate.time($0.end)] } ?? NSNull(),

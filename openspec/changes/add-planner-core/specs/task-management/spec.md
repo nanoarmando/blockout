@@ -53,7 +53,7 @@ The task list SHALL show open tasks in two groups: "Sin agendar" (no block today
 - **THEN** the task status becomes "hecha" and it leaves the list
 
 ### Requirement: Sidebar filters
-The sidebar SHALL offer the filters Todas, Hoy (a block today or due today), Sin agendar, Agendadas, Vencidas (open and past due date) and Completadas (done tasks only), each with its count, plus one filter per project and one per source label. Selecting a filter SHALL restrict the task list to matching tasks.
+The sidebar SHALL offer the filters Todas, Hoy (a block today; the due date does not count), Sin agendar, Agendadas, Vencidas (open and past due date) and Completadas (done tasks only), each with its count, plus one filter per project and one per source label. Selecting a filter SHALL restrict the task list to matching tasks.
 
 #### Scenario: Overdue filter
 - **WHEN** an open task was due yesterday and the user selects "Vencidas"

@@ -5,19 +5,19 @@ Turns tasks into time blocks on the calendar and keeps each block reserved as a 
 ## ADDED Requirements
 
 ### Requirement: Create a block by dragging a task
-The user SHALL be able to drag a task from the list onto a time-based view. While dragging, a preview SHALL follow the pointer in 15-minute steps and show the resulting time range. The block length SHALL be the default block length from settings; the task estimate is only used when that setting is "según la estimación". When the preview overlaps an event or block, it SHALL move to the next free slot of that day; when no slot fits before the end of the working hours, the drop SHALL NOT be accepted.
+The user SHALL be able to drag a task from the list onto a time-based view. While dragging, a preview SHALL follow the pointer in 15-minute steps and show the resulting time range. The block length SHALL be the default block length from settings; the task estimate is only used when that setting is "según la estimación". The block SHALL land exactly where the pointer is, kept inside the working hours. When that range overlaps a busy event or another block, the preview SHALL turn into a conflict state with the message "No se puede planificar aquí porque coincide con otra actividad" and the drop SHALL NOT be accepted. Events marked as free (available) in the calendar SHALL NOT count as busy. Moving or resizing existing blocks keeps its own rule below.
 
 #### Scenario: Drop on a free slot
 - **WHEN** the user drops a task without estimate at 16:00 on Thursday and the default length is 60 minutes
 - **THEN** a 16:00 to 17:00 block is created and the task moves to "Agendadas" showing "Jue 16:00"
 
 #### Scenario: Drop over a meeting
-- **WHEN** the user drops a 1-hour task at 13:45 and a meeting runs from 14:00 to 14:30
-- **THEN** the preview and the block land at 14:30 to 15:30
+- **WHEN** the user drags a 1-hour task to 13:45 and a meeting runs from 14:00 to 14:30
+- **THEN** the preview shows the conflict message and dropping does nothing
 
-#### Scenario: No room left
-- **WHEN** the only free time left that day is 30 minutes and the task needs 1 hour
-- **THEN** the preview is not shown for that day and dropping does nothing
+#### Scenario: Free event does not block
+- **WHEN** the user drops a 1-hour task at 9:00 over an event marked as free
+- **THEN** a 9:00 to 10:00 block is created
 
 ### Requirement: Block is written to the calendar immediately
 Creating a block SHALL immediately create an event in the destination calendar with the block title (`[Proyecto] Título` when the task has a project, otherwise the task title), the block's time range, the availability chosen in settings (busy by default) and a note identifying it as a Blockout block. The block SHALL NOT be created when the event cannot be saved, and the user SHALL see the reason.
