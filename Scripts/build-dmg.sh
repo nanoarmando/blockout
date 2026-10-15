@@ -23,4 +23,10 @@ ln -s /Applications "$staging/Applications"
 DMG="$ROOT/dist/Blockout-$VERSION.dmg"
 rm -f "$DMG"
 hdiutil create -volname "Blockout $VERSION" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$DMG" > /dev/null
+# hdiutil create is deprecated and once produced an image hdiutil itself rejects; never ship one unverified
+if ! hdiutil verify "$DMG" > /dev/null 2>&1; then
+  rm -f "$DMG"
+  print -u2 "The disk image failed verification; run the script again."
+  exit 1
+fi
 print -r -- "$DMG"
