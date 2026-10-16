@@ -118,7 +118,7 @@ final class StartPrompts: NSObject, UNUserNotificationCenterDelegate {
         var requests: [UNNotificationRequest] = []
         for block in calendarService.blocks(in: today) {
             guard let task = block.task else { continue }
-            let range = "\(task.title) · \(PlannerFormat.timeRange(block.start, block.end))"
+            let range = "\(task.blockTitle) · \(PlannerFormat.timeRange(block.start, block.end))"
             if !skipped.contains(block.id) {
                 let fireDate = snoozedUntil[block.id].flatMap { $0 < block.end ? $0 : nil } ?? block.start
                 if fireDate > now {
