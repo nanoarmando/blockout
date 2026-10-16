@@ -5,7 +5,7 @@ Records the real time spent on each task with little friction, keeps it editable
 ## ADDED Requirements
 
 ### Requirement: Start prompt
-When a block starts and no timer is running for it, Blockout SHALL show a macOS notification "¿Estás trabajando en esto?" with the task title and block range and the actions "Sí, empezar", "En 5 min" and "Saltar". "Sí, empezar" SHALL start the timer for that task; "En 5 min" SHALL ask again five minutes later while the block is still in progress; "Saltar" SHALL not ask again for that block. Without notification permission, the prompt SHALL appear only in the menu bar menu.
+When a block starts and no timer is running for it, Blockout SHALL show a macOS notification "¿Estás trabajando en esto?" with the task title and block range and the actions "Sí, empezar", "En 5 min" and "Saltar". "Sí, empezar" SHALL start the timer for that task; "En 5 min" SHALL ask again five minutes later while the block is still in progress; "Saltar" SHALL not ask again for that block. Without notification permission, the prompt SHALL appear only in the menu bar menu, and the menu SHALL show "Notificaciones desactivadas" with "Abrir Ajustes", which opens the macOS notification settings. Permission granted later SHALL take effect without restarting the app.
 
 #### Scenario: Accept at block start
 - **WHEN** the 11:00 block of "Checkout - Personalizaciones por país" starts and the user chooses "Sí, empezar"
@@ -14,6 +14,25 @@ When a block starts and no timer is running for it, Blockout SHALL show a macOS 
 #### Scenario: Snooze
 - **WHEN** the user chooses "En 5 min" at 11:00
 - **THEN** the notification appears again at 11:05 if the block is still in progress
+
+#### Scenario: Notifications turned off
+- **WHEN** notifications for Blockout are off in macOS and the user opens the menu bar menu
+- **THEN** the menu shows "Notificaciones desactivadas" and "Abrir Ajustes"; after the user turns them on and returns to Blockout, the warning disappears and the next block start is notified
+
+### Requirement: End prompt
+When a block ends while the timer runs for its task, Blockout SHALL show a macOS notification "¿Terminaste esta tarea?" with the task title and block range and the actions "Terminada" and "+15 min". "Terminada" SHALL stop the timer and mark the task as done; "+15 min" SHALL extend the block as the menu's "+15 min" does, and the prompt SHALL move to the new end. No end prompt SHALL be shown for a block whose task is not being timed.
+
+#### Scenario: Finish at block end
+- **WHEN** the timer runs for "Checkout - Personalizaciones por país", its 11:00–12:00 block reaches 12:00 and the user chooses "Terminada"
+- **THEN** the timer stops, the entry is saved and the task is marked as done
+
+#### Scenario: Extend at block end
+- **WHEN** the same block reaches 12:00 and the user chooses "+15 min"
+- **THEN** the block ends at 12:15, the following blocks shift as with the menu action, and the prompt appears again at 12:15
+
+#### Scenario: Task not being timed
+- **WHEN** a block reaches its end and no timer runs for its task
+- **THEN** no end prompt is shown
 
 ### Requirement: One timer at a time
 Only one timer SHALL run at a time. Starting a timer for another task SHALL stop the current one and save its entry.

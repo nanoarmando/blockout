@@ -11,7 +11,7 @@ Blockout is a free (GPL-3.0) time-blocking planner for macOS. You keep your task
 - **Blocks are real events**: dropping a task creates an event in the destination calendar at once, titled "[Proyecto] Título" (the task keeps its own title). Renaming the task or its project updates all its events. Move, resize, Option-drag to duplicate, or drag back to the list to unschedule. Changes made in Calendar or on the web are reflected back.
 - **Local MCP server** for AI agents and automations (for example Claude or your own scripts) to read and change projects, tasks, the schedule and blocks.
 - **Draft plans**: an agent can propose blocks; they appear hatched with a banner to accept or discard all, or one by one. Nothing reaches the calendar until you accept.
-- **Time tracking**: when a block starts, a notification asks "¿Estás trabajando en esto?" and starts a timer. The menu bar shows the running time and a native menu with Completar, +15 min, Pausar and Detener, and the rest of the day. "+15 min" extends the current block and moves the following blocks around your meetings; blocks that no longer fit return to "Sin agendar". Recorded time is editable in each task.
+- **Time tracking**: when a block starts, a notification asks "¿Estás trabajando en esto?" and starts a timer. When a block you are timing reaches its end, another notification asks "¿Terminaste esta tarea?" with "Terminada" and "+15 min". The menu bar shows the running time and a native menu with Completar, +15 min, Pausar and Detener, and the rest of the day. "+15 min" extends the current block and moves the following blocks around your meetings; blocks that no longer fit return to "Sin agendar". Recorded time is editable in each task.
 - Light and dark appearance following the system.
 
 ## Requirements
@@ -71,7 +71,7 @@ Maintainers: keep a backup of the `.p12` (before deleting it) in a safe place. I
 
 On first launch Blockout asks for full access to your calendars. If you deny it, tasks keep working and the calendar area offers a button to open System Settings › Privacy & Security › Calendars.
 
-It also asks to send notifications, used for the block start prompt. Without that permission, the prompt appears only in the menu bar menu.
+It also asks to send notifications, used for the block start and end prompts. Without that permission, the menu bar menu shows "Notificaciones desactivadas" with a shortcut to System Settings, and the prompts appear only in the menu. Permission granted later applies without restarting the app.
 
 Closing the window keeps Blockout running in the menu bar (the timer and the MCP server need it). Quit with ⌘Q.
 

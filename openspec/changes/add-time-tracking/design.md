@@ -13,8 +13,8 @@ See proposal.md. Blocks, `CalendarService`, `SlotFinder` and the MCP server exis
 ### D1. `MenuBarExtra` with `.menu` style
 Native menu rendering for free (material, font, separators, ⌘ shortcuts). Alternative: `.window` style popover — custom look, rejected because the user asked for the native menu.
 
-### D2. `UNUserNotificationCenter` with a category and three actions
-Scheduled for each block start of today (rescheduled on block changes). Actions handled in the app delegate. Snooze schedules a one-shot five minutes later if the block is still in progress.
+### D2. `UNUserNotificationCenter` with start and end categories
+`BLOCK_START` ("Sí, empezar", "En 5 min", "Saltar") is scheduled for each block start of today; `BLOCK_END` ("Terminada", "+15 min") only for the block whose task has the timer running, so "+15 min" can reuse `TimeTracker.extend`. Requests use calendar triggers at the exact time and are rebuilt, one run at a time, on block changes, day changes and timer changes. Actions are handled by `StartPrompts` as the center's delegate. Snooze schedules a one-shot five minutes later if the block is still in progress. Authorization is read from the notification settings and refreshed when the app becomes active or the menu opens; failures are logged instead of ignored, because a silent failure left the prompts off with no visible cause.
 
 ### D3. Time entries persisted incrementally
 `TimeEntry` (task, start, end?) saved when started; a running entry has no end. On launch, an open entry is closed at the last heartbeat (written every minute) so a crash loses at most one minute; on normal quit it is closed at quit time.

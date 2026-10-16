@@ -64,6 +64,7 @@ struct BlockoutApp: App {
             MenuBarMenu()
                 .environment(calendarService)
                 .environment(timeTracker)
+                .environment(startPrompts)
                 .environment(updates)
         } label: {
             MenuBarLabel { openWindow in appDelegate.openMainWindow = { openWindow(id: "main") } }

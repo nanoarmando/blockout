@@ -7,6 +7,7 @@
 - [x] 2.1 Request notification permission and register the category with "Sí, empezar", "En 5 min", "Saltar" (D2)
 - [x] 2.2 Schedule prompts for today's block starts, rescheduling on block changes; handle the three actions
 - [x] 2.3 Implement start, pause/resume, stop/resume and complete, enforcing one timer at a time
+- [x] 2.4 Add the end prompt ("Terminada", "+15 min") for the timed block, the "Notificaciones desactivadas" menu warning and permission refresh (D2)
 
 ## 3. Menu bar
 
