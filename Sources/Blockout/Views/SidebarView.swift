@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 enum TaskFilter: Hashable {
-    case all, today, unscheduled, scheduled, overdue, completed
+    case all, today, unscheduled, scheduled, overdue, reopened, completed
     case project(UUID)
     case source(String)
 
@@ -13,6 +13,7 @@ enum TaskFilter: Hashable {
         case .unscheduled: !task.isScheduled
         case .scheduled: task.isScheduled
         case .overdue: task.isOverdue
+        case .reopened: task.visibleReopenedAt != nil
         case .completed: task.status == .done
         case .project(let id): task.project?.id == id
         case .source(let label): task.sourceLabel == label
@@ -31,7 +32,8 @@ struct SidebarView: View {
 
     private static let visibleProjectCount = 5
     private static let fixedFilters: [(TaskFilter, String)] = [
-        (.all, "Todas"), (.today, "Hoy"), (.unscheduled, "Sin agendar"), (.scheduled, "Agendadas"), (.overdue, "Vencidas"), (.completed, "Completadas"),
+        (.all, "Todas"), (.today, "Hoy"), (.unscheduled, "Sin agendar"), (.scheduled, "Agendadas"), (.overdue, "Vencidas"), (.reopened, "Reabiertas"),
+        (.completed, "Completadas"),
     ]
 
     var body: some View {

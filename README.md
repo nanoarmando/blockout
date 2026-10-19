@@ -4,9 +4,9 @@ Blockout is a free (GPL-3.0) time-blocking planner for macOS. You keep your task
 
 ## Features
 
-- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Completed tasks are hidden; the check icon above the input shows them (uncheck one to reopen it). Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
+- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Completed tasks are hidden; the check icon above the input shows them (uncheck one to reopen it). A task that an automation reopens through the MCP shows a "Reabierto" badge (hover it for the date) until it is completed again. Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
 - **One input to filter and create**: typing filters the list; Enter creates a task. A trailing `2h` sets the estimate, a trailing `!!` sets the urgency, and an existing project name in the text assigns the project.
-- **Sidebar filters**: Todas, Hoy (tasks with a block today), Sin agendar, Agendadas, Vencidas, Completadas, plus one filter per project and per source.
+- **Sidebar filters**: Todas, Hoy (tasks with a block today), Sin agendar, Agendadas, Vencidas, Reabiertas, Completadas, plus one filter per project and per source.
 - **Calendar** in Día, Días (2 to 7), Semana and Mes views, showing the macOS calendars you choose, the free time per day and a red current-time line.
 - **Blocks are real events**: dropping a task creates an event in the destination calendar at once, titled "[Proyecto] Título" (the task keeps its own title). Renaming the task or its project updates all its events. Move, resize, Option-drag to duplicate, or drag back to the list to unschedule. Changes made in Calendar or on the web are reflected back.
 - **Local MCP server** for AI agents and automations (for example Claude or your own scripts) to read and change projects, tasks, the schedule and blocks.
@@ -98,7 +98,7 @@ While Blockout is open, it serves the Model Context Protocol at `http://127.0.0.
 |---|---|
 | `list_projects`, `create_project` | List projects; creating an existing name (any case) returns the existing one. |
 | `list_tasks` | Tasks with native fields, blocks, drafts and scheduled state. Filters: `status`, `project`, `include_done`. |
-| `create_task`, `update_task` | Every task field, including `external_ref {label, id, url}`. Create returns the existing task for an open task with the same title or any task with the same external reference, unless `allow_duplicate` is true. |
+| `create_task`, `update_task` | Every task field, including `external_ref {label, id, url}`. Create returns the existing task for an open task with the same title or any task with the same external reference, unless `allow_duplicate` is true. `update_task` also accepts `reopened` (true marks an open task as reopened; false or null removes the mark), and every task in tool output includes `reopened_at`. |
 | `delete_task`, `delete_block` | Without `confirm: true` they only return what would be deleted. |
 | `get_schedule` | Events, blocks, drafts, working hours and free time for up to 31 days. |
 | `schedule_task`, `update_block` | Create or change a block and its calendar event at once; a busy start moves to the next free slot. |
@@ -124,12 +124,13 @@ Any process on your Mac can call the server while it is on; turn it off in Setti
 
 ## Status
 
-The plan lives in `openspec/changes/`, in four stages:
+The plan lives in `openspec/changes/`, in four stages plus later changes:
 
 1. `add-planner-core`: tasks, projects and the calendar planner (implemented, pending manual verification).
 2. `add-mcp-server`: local MCP server for AI agents and automations, and draft plans to accept or discard (implemented, pending manual verification).
 3. `add-time-tracking`: start prompts, a timer in the menu bar and editable time entries (implemented, pending manual verification).
 4. `add-public-release`: signed DMG releases on GitHub and in-app updates (released as 1.0.0).
+5. `add-reopened-badge`: "Reabierto" badge and "Reabiertas" filter for tasks that an automation reopens through the MCP (released as 1.0.6).
 
 ## Roadmap
 

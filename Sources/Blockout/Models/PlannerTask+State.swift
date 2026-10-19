@@ -9,6 +9,9 @@ extension PlannerTask {
 
     var isOpen: Bool { status != .done }
 
+    /// The reopened mark, shown only while the task is open.
+    var visibleReopenedAt: Date? { isOpen ? reopenedAt : nil }
+
     /// Title of the task's blocks and their calendar events; the task title itself never carries the prefix.
     var blockTitle: String {
         project.map { "[\($0.name)] \(title)" } ?? title

@@ -146,6 +146,7 @@ final class MCPTools {
         if let title, title.isEmpty { throw ToolError("title must not be empty") }
         let fields = try TaskFields(arguments)
         let project = try fields.projectReference.map { try $0.map(resolveProject) }
+        let reopened = try arguments.nullable("reopened") { try arguments.bool("reopened") }
 
         // Completing goes first: it is the only step that can fail on the calendar, and it follows the UI rule.
         if fields.status == .done, task.status != .done {
@@ -155,6 +156,14 @@ final class MCPTools {
         if let title { task.title = title }
         if let project { task.project = project }
         fields.apply(to: task)
+        // Applied after the status so a task that ends done never keeps the mark
+        if let reopened {
+            if reopened != true {
+                task.reopenedAt = nil
+            } else if task.isOpen {
+                task.reopenedAt = .now
+            }
+        }
         try context.save()
         // The task change is kept even when its events cannot be retitled; the result says why
         if task.blockTitle != previousBlockTitle {
@@ -364,6 +373,7 @@ final class MCPTools {
             "drafts": task.blocks.filter(\.isDraft).sorted { $0.start < $1.start }.map { ["id": $0.id.uuidString.lowercased(), "start": MCPDate.string($0.start), "end": MCPDate.string($0.end)] },
             "scheduled": scheduled,
             "created_at": MCPDate.string(task.createdAt),
+            "reopened_at": task.reopenedAt.map(MCPDate.string) ?? NSNull(),
         ]
     }
 

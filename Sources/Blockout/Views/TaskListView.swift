@@ -240,9 +240,10 @@ private struct TaskRow: View {
     @ViewBuilder
     private var meta: some View {
         let hasMeta = task.project != nil || task.urgency > 0 || task.estimateMinutes != nil
-            || task.originLabel != nil || task.nextBlock != nil || task.dueDate != nil
+            || task.originLabel != nil || task.nextBlock != nil || task.dueDate != nil || task.visibleReopenedAt != nil
         if hasMeta {
             FlowLayout {
+                if let reopenedAt = task.visibleReopenedAt { ReopenedBadge(date: reopenedAt) }
                 if let project = task.project { ProjectChip(project: project) }
                 if task.urgency > 0 { UrgencyBars(level: task.urgency) }
                 if let estimate = task.estimateMinutes {

@@ -19,7 +19,7 @@ extension MCPTools {
         ),
         tool(
             "list_tasks",
-            "List tasks, newest first. By default only open tasks (not done). Each task has id, title, project, urgency (0 none to 3 high), estimate_hours, due_date (YYYY-MM-DD), status, notes, source, external_ref {label, id, url}, blocks and drafts with start and end, and scheduled (\"today\", \"later\" or null).",
+            "List tasks, newest first. By default only open tasks (not done). Each task has id, title, project, urgency (0 none to 3 high), estimate_hours, due_date (YYYY-MM-DD), status, notes, source, external_ref {label, id, url}, blocks and drafts with start and end, scheduled (\"today\", \"later\" or null), and reopened_at (when an agent last marked the task as reopened, or null).",
             properties: [
                 "status": statusSchema,
                 "project": string("Project id or name (case-insensitive)."),
@@ -37,10 +37,11 @@ extension MCPTools {
         ),
         tool(
             "update_task",
-            "Update fields of a task. Only the given fields change; pass null to clear project, estimate_hours, due_date, notes, source or external_ref. Setting status to done follows the app rule: blocks that have not started yet are deleted with their calendar events.",
+            "Update fields of a task. Only the given fields change; pass null to clear project, estimate_hours, due_date, notes, source or external_ref. Setting status to done follows the app rule: blocks that have not started yet are deleted with their calendar events and the reopened mark is removed.",
             properties: taskProperties.merging([
                 "id": string("Task id."),
                 "title": string("New title."),
+                "reopened": ["type": ["boolean", "null"], "description": "true marks an open task as reopened (for example, an automation reopened it after its source item returned) and shows a badge in the app; ignored when the task ends done. false or null removes the mark. Applied after status."],
             ]) { $1 },
             required: ["id"]
         ),

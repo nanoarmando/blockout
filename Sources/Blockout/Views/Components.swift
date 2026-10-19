@@ -34,6 +34,21 @@ struct ProjectChip: View {
     }
 }
 
+struct ReopenedBadge: View {
+    let date: Date
+
+    var body: some View {
+        Text("Reabierto")
+            .font(.system(size: 12, weight: .medium))
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 1)
+            .foregroundStyle(Theme.accentText)
+            .overlay(Capsule().strokeBorder(Theme.accentText, lineWidth: 1))
+            .help("Reabierto el \(PlannerFormat.dayMonth(date)) \(PlannerFormat.year(date)), \(PlannerFormat.time(date))")
+    }
+}
+
 struct CompletionButton: View {
     let isDone: Bool
     var size: CGFloat = 20

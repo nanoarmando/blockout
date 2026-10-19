@@ -290,6 +290,7 @@ final class CalendarService {
             try removeBlock(block)
         }
         task.status = .done
+        task.reopenedAt = nil
         try commit()
         onTaskDone?(task)
     }

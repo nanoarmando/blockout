@@ -61,6 +61,7 @@ struct TaskDetailView: View {
             if let label = task.externalRefLabel, let url = task.externalURL {
                 Link(label, destination: url).font(.system(size: 12)).foregroundStyle(Theme.accentText).pointerStyle(.link)
             }
+            if let reopenedAt = task.visibleReopenedAt { ReopenedBadge(date: reopenedAt) }
             Spacer()
             Button { dismiss() } label: {
                 Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).frame(width: 32, height: 32)
