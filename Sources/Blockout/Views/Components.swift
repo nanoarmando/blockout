@@ -160,3 +160,33 @@ struct FlowLayout: Layout {
         return rows
     }
 }
+
+/// "↵ Crear «…» en <proyecto>" for the list input and the quick-add bar, with the parser's project detection.
+struct CreateTaskHint: View {
+    let text: String
+    let projectNames: [String]
+
+    var body: some View {
+        let project = QuickEntryParser.detectProject(in: text, projectNames: projectNames)
+        Text("↵ Crear «\(text)»" + (project.map { " en \($0)" } ?? ""))
+            .foregroundStyle(Theme.ink)
+    }
+}
+
+/// The look of locked blocks (worked blocks of completed tasks): translucent project fill and a dashed outline
+/// in the project color. Unlocked blocks keep the solid fill.
+enum CompletedStyle {
+    static let fillOpacity = 0.45
+}
+
+extension View {
+    func completedBlockStyle(_ locked: Bool, colorIndex: Int?, cornerRadius: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        return background(ProjectPalette.fill(colorIndex).opacity(locked ? CompletedStyle.fillOpacity : 1), in: shape)
+            .overlay {
+                if locked {
+                    shape.strokeBorder(ProjectPalette.foreground(colorIndex).opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                }
+            }
+    }
+}

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 @main
 struct BlockoutApp: App {
@@ -11,8 +12,8 @@ struct BlockoutApp: App {
     @State private var dragState = DragState()
     @State private var mcpServer: MCPServer
     @State private var timeTracker: TimeTracker
-    @State private var startPrompts: StartPrompts
     @State private var updates: UpdateCoordinator
+    @State private var quickAddHotKey: QuickAddHotKey
 
     init() {
         do {
@@ -24,16 +25,21 @@ struct BlockoutApp: App {
         _settingsStore = State(initialValue: settingsStore)
         let calendarService = CalendarService(context: container.mainContext, settingsStore: settingsStore)
         _calendarService = State(initialValue: calendarService)
-        let mcpServer = MCPServer(tools: MCPTools(context: container.mainContext, calendarService: calendarService, settingsStore: settingsStore))
-        mcpServer.configure(enabled: settingsStore.settings.mcpEnabled, port: settingsStore.settings.mcpPort)
-        _mcpServer = State(initialValue: mcpServer)
         let timeTracker = TimeTracker(context: container.mainContext, calendarService: calendarService)
         _timeTracker = State(initialValue: timeTracker)
-        _startPrompts = State(initialValue: StartPrompts(calendarService: calendarService, timeTracker: timeTracker))
+        let mcpServer = MCPServer(tools: MCPTools(context: container.mainContext, calendarService: calendarService, settingsStore: settingsStore, timeTracker: timeTracker))
+        mcpServer.configure(enabled: settingsStore.settings.mcpEnabled, port: settingsStore.settings.mcpPort)
+        _mcpServer = State(initialValue: mcpServer)
+        // Earlier versions scheduled block prompts; removing them needs no authorization, so no dialog appears
+        let notificationCenter = UNUserNotificationCenter.current()
+        notificationCenter.removeAllPendingNotificationRequests()
+        notificationCenter.removeAllDeliveredNotifications()
         let updates = UpdateCoordinator()
         updates.isAppBusy = { timeTracker.running != nil }
         updates.start()
         _updates = State(initialValue: updates)
+        let quickAdd = QuickAddController(context: container.mainContext)
+        _quickAddHotKey = State(initialValue: QuickAddHotKey(shortcut: settingsStore.settings.newTaskShortcut) { quickAdd.toggle() })
     }
 
     var body: some Scene {
@@ -64,7 +70,6 @@ struct BlockoutApp: App {
             MenuBarMenu()
                 .environment(calendarService)
                 .environment(timeTracker)
-                .environment(startPrompts)
                 .environment(updates)
         } label: {
             MenuBarLabel { openWindow in appDelegate.openMainWindow = { openWindow(id: "main") } }
@@ -77,6 +82,7 @@ struct BlockoutApp: App {
                 .environment(settingsStore)
                 .environment(mcpServer)
                 .environment(calendarService)
+                .environment(quickAddHotKey)
                 .modelContainer(container)
         }
     }

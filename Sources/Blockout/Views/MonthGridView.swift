@@ -48,14 +48,14 @@ struct MonthGridView: View {
                 .foregroundStyle(calendar.isDateInToday(day) ? Theme.now : Theme.ink)
             ForEach(Array(shown), id: \.id) { block in
                 let colorIndex = block.task?.project?.colorIndex
-                Text(block.task?.blockTitle ?? "")
+                Text(block.locked ? "✓ \(block.task?.blockTitle ?? "")" : block.task?.blockTitle ?? "")
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(ProjectPalette.foreground(colorIndex))
-                    .background(ProjectPalette.fill(colorIndex), in: RoundedRectangle(cornerRadius: 4))
+                    .background(ProjectPalette.fill(colorIndex).opacity(block.locked ? CompletedStyle.fillOpacity : 1), in: RoundedRectangle(cornerRadius: 4))
             }
             if remaining > 0 {
                 Text("+\(remaining)").font(.system(size: 11)).foregroundStyle(Theme.muted)

@@ -73,6 +73,9 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 12)
             }
+            section("Atajos") {
+                ShortcutRecorder()
+            }
             section("Integraciones") {
                 mcpRows
             }
@@ -325,5 +328,89 @@ private struct MCPConfiguration: Equatable {
     init(_ settings: AppSettings) {
         enabled = settings.mcpEnabled
         port = settings.mcpPort
+    }
+}
+
+/// "Nueva tarea" row: records the next key press with a local monitor (no permission needed inside the app) while
+/// the global shortcut is paused, and applies it only when macOS registers it.
+private struct ShortcutRecorder: View {
+    @Environment(SettingsStore.self) private var settingsStore
+    @Environment(QuickAddHotKey.self) private var hotKey
+    @State private var monitor: Any?
+    @State private var rejected = false
+
+    private var isRecording: Bool { monitor != nil }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Nueva tarea")
+                if let message {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.danger)
+                }
+            }
+            Spacer()
+            Button { isRecording ? stopRecording() : startRecording() } label: {
+                if isRecording {
+                    Text("Presiona la combinación…")
+                } else if let shortcut = settingsStore.settings.newTaskShortcut {
+                    Text(verbatim: shortcut.display)
+                } else {
+                    Text("Sin atajo")
+                }
+            }
+            .frame(minWidth: 160)
+            if settingsStore.settings.newTaskShortcut != nil, !isRecording {
+                Button("Quitar") { apply(nil) }
+            }
+        }
+        .frame(minHeight: 52)
+        .onDisappear(perform: stopRecording)
+    }
+
+    private var message: String? {
+        if rejected { return "Usa al menos ⌘, ⌥ o ⌃ junto con otra tecla." }
+        if let unavailable = hotKey.unavailable {
+            return "\(unavailable.display) no está disponible; puede estar en uso por otra aplicación."
+        }
+        return nil
+    }
+
+    private func startRecording() {
+        rejected = false
+        hotKey.pause()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            MainActor.assumeIsolated { record(event) }
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        guard let monitor else { return }
+        NSEvent.removeMonitor(monitor)
+        self.monitor = nil
+        hotKey.resume()
+    }
+
+    /// Esc alone cancels; a combination without Command, Option or Control is rejected and the current one kept.
+    private func record(_ event: NSEvent) {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let isPlainEscape = Int(event.keyCode) == 53 && flags.isDisjoint(with: [.command, .option, .control, .shift])
+        stopRecording()
+        guard !isPlainEscape else { return }
+        guard let shortcut = KeyShortcut(event: event) else {
+            rejected = true
+            return
+        }
+        apply(shortcut)
+    }
+
+    private func apply(_ shortcut: KeyShortcut?) {
+        rejected = false
+        if hotKey.update(to: shortcut) {
+            settingsStore.settings.newTaskShortcut = shortcut
+        }
     }
 }

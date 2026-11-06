@@ -62,7 +62,10 @@ extension ModelContext {
         return project
     }
 
-    func createTask(from entry: QuickEntry, projects: [Project]) throws {
+    /// Creates a task from the filter-and-create text (list input and quick-add bar) with `QuickEntryParser`.
+    func createTask(parsing text: String) throws {
+        let projects = try fetch(FetchDescriptor<Project>())
+        let entry = QuickEntryParser.parse(text, projectNames: projects.map(\.name))
         let project = entry.projectName.flatMap { name in projects.first { $0.name == name } }
         insert(PlannerTask(title: entry.title, project: project, urgency: entry.urgency, estimateMinutes: entry.estimateMinutes))
         try save()

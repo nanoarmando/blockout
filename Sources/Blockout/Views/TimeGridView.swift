@@ -264,7 +264,7 @@ private struct DayColumn: View {
             return DropPreview(day: day, start: start, end: range.end, title: task.blockTitle, conflict: conflict)
         case .block(let id):
             // Moving an existing block is deliberate, so it may overlap other items.
-            guard let block = allBlocks.first(where: { $0.id == id }) else { return nil }
+            guard let block = allBlocks.first(where: { $0.id == id }), !block.locked else { return nil }
             let duration = block.end.timeIntervalSince(block.start)
             let start = snappedStart(at: location, duration: duration)
             return DropPreview(day: day, start: start, end: start.addingTimeInterval(duration), title: block.task?.blockTitle ?? "")
@@ -379,7 +379,9 @@ private struct BlockItem: View {
         let isShort = block.end.timeIntervalSince(block.start) < 45 * 60
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 4) {
-                Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
+                if block.locked {
+                    Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
+                }
                 Text(block.task?.blockTitle ?? "").lineLimit(1).truncationMode(.tail)
             }
             .font(.system(size: 11, weight: .medium))
@@ -392,13 +394,13 @@ private struct BlockItem: View {
         .padding(.vertical, isShort ? 1 : 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .frame(height: max(16, height + CGFloat(resizeMinutes) / 60 * hourHeight))
-        .background(ProjectPalette.fill(colorIndex), in: RoundedRectangle(cornerRadius: 6))
-        .overlay(alignment: .bottom) { resizeHandle }
+        .completedBlockStyle(block.locked, colorIndex: colorIndex, cornerRadius: 6)
+        .overlay(alignment: .bottom) {
+            if !block.locked { resizeHandle }
+        }
         .contentShape(Rectangle())
         .onTapGesture { if let task = block.task { openTask(task) } }
-        .onDrag {
-            dragState.begin(.block(block.id))
-        }
+        .modifier(BlockDrag(block: block, dragState: dragState))
         .help("\(block.task?.blockTitle ?? "") · \(timeLabel)")
     }
 
@@ -429,6 +431,20 @@ private struct BlockItem: View {
                         calendarService.moveBlock(block, start: block.start, end: block.end.addingTimeInterval(TimeInterval(minutes * 60)))
                     }
             )
+    }
+}
+
+/// Locked blocks (worked blocks of completed tasks) cannot be dragged, so they get no `onDrag`.
+private struct BlockDrag: ViewModifier {
+    let block: Block
+    let dragState: DragState
+
+    func body(content: Content) -> some View {
+        if block.locked {
+            content
+        } else {
+            content.onDrag { dragState.begin(.block(block.id)) }
+        }
     }
 }
 

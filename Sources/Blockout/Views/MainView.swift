@@ -108,6 +108,14 @@ struct MainView: View {
                 RoundedRectangle(cornerRadius: 3).fill(ProjectPalette.fill(0)).frame(width: 12, height: 12)
                 Text(settingsStore.settings.blocksShowAsBusy ? "Bloque de tarea · te marca como ocupado" : "Bloque de tarea · se muestra como disponible")
             }
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(ProjectPalette.foreground(0))
+                    .frame(width: 12, height: 12)
+                    .completedBlockStyle(true, colorIndex: 0, cornerRadius: 3)
+                Text("Completado")
+            }
         }
         .font(.system(size: 12))
         .foregroundStyle(Theme.muted)

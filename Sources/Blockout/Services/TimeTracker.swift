@@ -5,7 +5,7 @@ import SwiftData
 
 /// The single timer. A running entry is saved when it starts (with no end) and a heartbeat is written every minute,
 /// so an entry left open by a crash is closed at the last heartbeat on the next launch; a normal quit closes it at
-/// the quit time. Every time-entry write (menu, task detail, notifications) goes through this service.
+/// the quit time. Every time-entry write (menu, task detail, MCP) goes through this service.
 @MainActor
 @Observable
 final class TimeTracker {
@@ -200,6 +200,45 @@ final class TimeTracker {
         if lastIdle?.entry === entry { lastIdle = nil }
         context.delete(entry)
         save()
+    }
+
+    // MARK: Agent entries (MCP)
+
+    func entry(withKey key: String) throws -> TimeEntry? {
+        var descriptor = FetchDescriptor<TimeEntry>(predicate: #Predicate { $0.key == key })
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    /// Creates the closed entry with `key`, or replaces every field of the existing one. Never touches the timer.
+    /// The caller validates the range; returns the entry and whether it was created.
+    func upsertEntry(key: String, task: PlannerTask, start: Date, end: Date, note: String?, origin: String?) throws -> (entry: TimeEntry, created: Bool) {
+        let existing = try entry(withKey: key)
+        let entry = existing ?? TimeEntry(task: task, start: start, end: end)
+        if existing == nil { context.insert(entry) }
+        entry.key = key
+        entry.task = task
+        entry.start = start
+        entry.end = end
+        entry.note = note
+        entry.origin = origin
+        try saveOrRollback()
+        return (entry, existing == nil)
+    }
+
+    /// Deletes an agent entry; agent entries are always closed, so the timer is unaffected.
+    func deleteEntry(_ entry: TimeEntry) throws {
+        context.delete(entry)
+        try saveOrRollback()
+    }
+
+    private func saveOrRollback() throws {
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
     }
 
     private func save() {

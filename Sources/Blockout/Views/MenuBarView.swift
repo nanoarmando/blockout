@@ -38,7 +38,6 @@ enum MenuBarIcon {
 struct MenuBarMenu: View {
     @Environment(CalendarService.self) private var calendarService
     @Environment(TimeTracker.self) private var timeTracker
-    @Environment(StartPrompts.self) private var startPrompts
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
 
@@ -79,15 +78,6 @@ struct MenuBarMenu: View {
             }
         }
         Divider()
-        if startPrompts.isAvailable, !startPrompts.isAuthorized {
-            Text("Notificaciones desactivadas")
-            Button("Abrir Ajustes") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-            Divider()
-        }
         Button("Abrir Blockout", action: openMain).keyboardShortcut("o")
         AboutMenuItems()
         Button("Ajustes…") {
@@ -95,7 +85,6 @@ struct MenuBarMenu: View {
             openSettings()
         }
         .keyboardShortcut(",")
-        .task { await startPrompts.refreshAuthorization() }
     }
 
     private func heading(block: Block?, now: Date) -> String {

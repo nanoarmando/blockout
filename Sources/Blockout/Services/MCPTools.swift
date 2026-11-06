@@ -14,11 +14,13 @@ final class MCPTools {
     private let context: ModelContext
     private let calendarService: CalendarService
     private let settingsStore: SettingsStore
+    private let timeTracker: TimeTracker
 
-    init(context: ModelContext, calendarService: CalendarService, settingsStore: SettingsStore) {
+    init(context: ModelContext, calendarService: CalendarService, settingsStore: SettingsStore, timeTracker: TimeTracker) {
         self.context = context
         self.calendarService = calendarService
         self.settingsStore = settingsStore
+        self.timeTracker = timeTracker
     }
 
     /// The `tools/call` result: the handler's JSON as text content, or `isError` with the message.
@@ -57,6 +59,8 @@ final class MCPTools {
             "delete_block": deleteBlock,
             "propose_blocks": proposeBlocks,
             "list_time_entries": listTimeEntries,
+            "upsert_time_entry": upsertTimeEntry,
+            "delete_time_entry": deleteTimeEntry,
         ]
     }
 
@@ -262,6 +266,7 @@ final class MCPTools {
 
     private func updateBlock(_ arguments: ToolArguments) throws -> [String: Any] {
         let block = try existingBlock(arguments.requiredUUID("id"))
+        guard !block.locked else { throw ToolError("block is locked: it belongs to a completed task and cannot be moved or resized") }
         let start = try arguments.date("start")
         let length = try arguments.int("length_minutes")
         guard start != nil || length != nil else { throw ToolError("give start, length_minutes or both") }
@@ -324,22 +329,31 @@ final class MCPTools {
         guard let end = calendar.date(byAdding: .day, value: 1, to: to) else { throw ToolError("invalid date range") }
         let descriptor = FetchDescriptor<TimeEntry>(predicate: #Predicate { $0.start >= from && $0.start < end }, sortBy: [SortDescriptor(\.start)])
         let now = Date.now
-        let entries: [[String: Any]] = try context.fetch(descriptor).map { entry in
-            let task = entry.task
-            return [
-                "id": entry.id.uuidString.lowercased(),
-                "start": MCPDate.string(entry.start),
-                "end": entry.end.map(MCPDate.string) ?? NSNull(),
-                "running": entry.end == nil,
-                "minutes": entry.minutes(now: now),
-                "task_id": task.map { $0.id.uuidString.lowercased() } ?? NSNull(),
-                "title": task?.title ?? "",
-                "project": task?.project?.name ?? NSNull(),
-                "source": task?.sourceLabel ?? NSNull(),
-                "external_ref": task.map(externalRefJSON) ?? NSNull(),
-            ]
-        }
+        let entries = try context.fetch(descriptor).map { json($0, now: now) }
         return ["from": MCPDate.day(from), "to": MCPDate.day(to), "entries": entries]
+    }
+
+    private func upsertTimeEntry(_ arguments: ToolArguments) throws -> [String: Any] {
+        let key = try arguments.requiredString("key")
+        let task = try existingTask(arguments.requiredUUID("task_id"))
+        let start = try arguments.requiredDate("start")
+        let end = try arguments.requiredDate("end")
+        guard end >= start else { throw ToolError("end must not be before start") }
+        let note = try arguments.string("note").flatMap { $0.isEmpty ? nil : $0 }
+        let origin = try arguments.string("origin").flatMap { $0.isEmpty ? nil : $0 }
+        let result = try timeTracker.upsertEntry(key: key, task: task, start: start, end: end, note: note, origin: origin)
+        return ["entry": json(result.entry), "created": result.created]
+    }
+
+    private func deleteTimeEntry(_ arguments: ToolArguments) throws -> [String: Any] {
+        let key = try arguments.requiredString("key")
+        guard let entry = try timeTracker.entry(withKey: key) else { throw ToolError("time entry not found: \(key)") }
+        guard try arguments.bool("confirm") == true else {
+            return ["requires_confirmation": true, "would_delete": ["entry": json(entry)]]
+        }
+        let summary = json(entry)
+        try timeTracker.deleteEntry(entry)
+        return ["deleted": ["entry": summary]]
     }
 
     /// `length_minutes`, or the default block length for the task (its estimate or the setting).
@@ -369,7 +383,7 @@ final class MCPTools {
             "notes": task.notes,
             "source": task.sourceLabel ?? NSNull(),
             "external_ref": externalRefJSON(task),
-            "blocks": task.confirmedBlocks.sorted { $0.start < $1.start }.map { ["id": $0.id.uuidString.lowercased(), "start": MCPDate.string($0.start), "end": MCPDate.string($0.end)] },
+            "blocks": task.confirmedBlocks.sorted { $0.start < $1.start }.map { ["id": $0.id.uuidString.lowercased(), "start": MCPDate.string($0.start), "end": MCPDate.string($0.end), "locked": $0.locked] },
             "drafts": task.blocks.filter(\.isDraft).sorted { $0.start < $1.start }.map { ["id": $0.id.uuidString.lowercased(), "start": MCPDate.string($0.start), "end": MCPDate.string($0.end)] },
             "scheduled": scheduled,
             "created_at": MCPDate.string(task.createdAt),
@@ -383,6 +397,25 @@ final class MCPTools {
         } ?? NSNull()
     }
 
+    private func json(_ entry: TimeEntry, now: Date = .now) -> [String: Any] {
+        let task = entry.task
+        return [
+            "id": entry.id.uuidString.lowercased(),
+            "start": MCPDate.string(entry.start),
+            "end": entry.end.map(MCPDate.string) ?? NSNull(),
+            "running": entry.end == nil,
+            "minutes": entry.minutes(now: now),
+            "task_id": task.map { $0.id.uuidString.lowercased() } ?? NSNull(),
+            "title": task?.title ?? "",
+            "project": task?.project?.name ?? NSNull(),
+            "source": task?.sourceLabel ?? NSNull(),
+            "external_ref": task.map(externalRefJSON) ?? NSNull(),
+            "key": entry.key ?? NSNull(),
+            "note": entry.note ?? NSNull(),
+            "origin": entry.origin ?? NSNull(),
+        ]
+    }
+
     private func json(_ block: Block) -> [String: Any] {
         [
             "id": block.id.uuidString.lowercased(),
@@ -393,6 +426,7 @@ final class MCPTools {
             "start": MCPDate.string(block.start),
             "end": MCPDate.string(block.end),
             "proposal_id": block.proposalID.map { $0.uuidString.lowercased() } ?? NSNull(),
+            "locked": block.locked,
         ]
     }
 

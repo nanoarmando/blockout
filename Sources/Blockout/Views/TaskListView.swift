@@ -75,6 +75,8 @@ struct TaskListView: View {
         .onDrop(of: [.plainText], delegate: UnscheduleDropDelegate(dragState: dragState, isTargeted: $isBlockOver) { blockID in
             guard let block = try? modelContext.fetch(FetchDescriptor<Block>(predicate: #Predicate { $0.id == blockID })).first
             else { return false }
+            // Locked blocks cannot be unscheduled by dragging; a stale payload may still name one
+            guard !block.locked else { return false }
             return calendarService.deleteBlock(block)
         })
         .confirmationDialog(
@@ -119,12 +121,10 @@ struct TaskListView: View {
                     .foregroundStyle(Theme.muted)
             } else {
                 let count = matchingTasks.count
-                let project = QuickEntryParser.detectProject(in: needle, projectNames: projects.map(\.name))
                 HStack(alignment: .top, spacing: 8) {
                     Text(count == 1 ? "1 coincidencia" : "\(count) coincidencias").foregroundStyle(Theme.muted)
                     Spacer()
-                    Text("↵ Crear «\(needle)»" + (project.map { " en \($0)" } ?? ""))
-                        .foregroundStyle(Theme.ink)
+                    CreateTaskHint(text: needle, projectNames: projects.map(\.name))
                         .multilineTextAlignment(.trailing)
                 }
                 .font(.system(size: 12))
@@ -174,9 +174,8 @@ struct TaskListView: View {
 
     private func create() {
         guard !needle.isEmpty else { return }
-        let entry = QuickEntryParser.parse(needle, projectNames: projects.map(\.name))
         do {
-            try modelContext.createTask(from: entry, projects: projects)
+            try modelContext.createTask(parsing: needle)
             query = ""
         } catch {
             calendarService.otherErrorMessage = error.localizedDescription

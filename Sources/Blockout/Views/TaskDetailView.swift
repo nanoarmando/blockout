@@ -15,7 +15,6 @@ struct TaskDetailView: View {
     @State private var syncedBlockTitle: String?
 
     private var sortedBlocks: [Block] { task.confirmedBlocks.sorted { $0.start < $1.start } }
-    private var remainingMinutes: Int { max(0, (task.estimateMinutes ?? 0) - task.scheduledMinutes) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -191,14 +190,12 @@ struct TaskDetailView: View {
             ForEach(sortedBlocks) { block in
                 blockRow(block)
             }
-            if remainingMinutes > 0 {
-                Button("+ Agendar las \(PlannerFormat.hours(minutes: remainingMinutes)) restantes", action: scheduleRemaining)
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.dashed, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
-            }
+            Button("+ Agendar sesión", action: scheduleSession)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14)
+                .frame(height: 36)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.dashed, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
         }
     }
 
@@ -274,6 +271,19 @@ struct TaskDetailView: View {
     }
 
     private func entryRow(_ entry: TimeEntry, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            entryTimeRow(entry, now: now)
+            let details = [entry.note, entry.origin].compactMap { $0 }
+            if !details.isEmpty {
+                Text(verbatim: details.joined(separator: " · "))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.muted)
+                    .padding(.leading, 76)
+            }
+        }
+    }
+
+    private func entryTimeRow(_ entry: TimeEntry, now: Date) -> some View {
         HStack(spacing: 8) {
             Text("\(PlannerFormat.weekday(entry.start)) \(PlannerFormat.day(entry.start))")
                 .foregroundStyle(Theme.muted)
@@ -325,10 +335,12 @@ struct TaskDetailView: View {
         }
     }
 
-    /// Places the unscheduled part of the estimate in the first free slot from now, within the next two weeks.
-    private func scheduleRemaining() {
-        let duration = TimeInterval(remainingMinutes * 60)
+    /// Places one block of the default length in the first free slot from now, within the next two weeks.
+    /// Works on done tasks too and never changes the task's status.
+    private func scheduleSession() {
         let settings = settingsStore.settings
+        let minutes = settings.blockMinutes(for: task)
+        let duration = TimeInterval(minutes * 60)
         let calendar = Calendar.planner
         let today = calendar.startOfDay(for: .now)
         let nowSnapped = today.addingTimeInterval(TimeInterval(SlotFinder.snap(minutes: Int(Date.now.timeIntervalSince(today) / 60) + SlotFinder.stepMinutes - 1) * 60))
@@ -343,6 +355,6 @@ struct TaskDetailView: View {
                 return
             }
         }
-        calendarService.otherErrorMessage = "No hay un hueco libre de \(PlannerFormat.hours(minutes: remainingMinutes)) en las próximas dos semanas."
+        calendarService.otherErrorMessage = "No hay un hueco libre de \(PlannerFormat.hours(minutes: minutes)) en las próximas dos semanas."
     }
 }

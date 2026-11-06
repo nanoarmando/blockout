@@ -34,12 +34,14 @@ enum CalendarWriteError: LocalizedError {
     case notAuthorized
     case destinationUnavailable
     case eventMissing
+    case blockLocked
 
     var errorDescription: String? {
         switch self {
         case .notAuthorized: "Blockout no tiene acceso a tus calendarios."
         case .destinationUnavailable: "El calendario de destino no existe o es de solo lectura. Elige un calendario con permiso de escritura en Ajustes."
         case .eventMissing: "El evento de este bloque ya no existe en el calendario."
+        case .blockLocked: "Este bloque es de una tarea completada y no se puede mover ni cambiar de tamaño."
         }
     }
 }
@@ -201,7 +203,7 @@ final class CalendarService {
         perform { try removeBlock(block) } != nil
     }
 
-    /// Marks the task done, keeping past blocks and deleting the ones that have not started yet.
+    /// Marks the task done, keeping every block and locking the ones that have started.
     func complete(_ task: PlannerTask) {
         perform { try markDone(task) }
     }
@@ -212,12 +214,14 @@ final class CalendarService {
         let event = try saveEvent(blockID: blockID, title: task.blockTitle, start: start, end: end)
         let block = Block(id: blockID, task: task, start: start, end: end, eventIdentifier: event.eventIdentifier)
         context.insert(block)
+        reopenIfDone(task)
         try commit(removingOnFailure: event)
         return block
     }
 
-    /// Drafts only change in the store; confirmed blocks move their event first.
+    /// Drafts only change in the store; confirmed blocks move their event first. Locked blocks are rejected.
     func updateBlock(_ block: Block, start: Date, end: Date) throws {
+        guard !block.locked else { throw CalendarWriteError.blockLocked }
         if !block.isDraft {
             guard hasAccess else { throw CalendarWriteError.notAuthorized }
             guard let event = event(for: block) else { throw CalendarWriteError.eventMissing }
@@ -284,10 +288,15 @@ final class CalendarService {
         perform { try removeTask(task) } != nil
     }
 
+    /// Keeps every confirmed block (future ones stay editable), locks the started ones and deletes the task's drafts.
     func markDone(_ task: PlannerTask) throws {
         let now = Date.now
-        for block in task.blocks.filter({ $0.start > now }) {
-            try removeBlock(block)
+        for block in task.blocks {
+            if block.isDraft {
+                context.delete(block)
+            } else if block.start <= now {
+                block.locked = true
+            }
         }
         task.status = .done
         task.reopenedAt = nil
@@ -301,7 +310,7 @@ final class CalendarService {
         guard hasAccess else { throw CalendarWriteError.notAuthorized }
         let newEnd = block.end.addingTimeInterval(TimeInterval(minutes * 60))
         let day = Calendar.planner.dayInterval(containing: block.start)
-        let later = blocks(in: day).filter { $0.id != block.id && $0.start >= block.start }
+        let later = blocks(in: day).filter { $0.id != block.id && $0.start >= block.start && !$0.locked }
         let workdayEnd = settingsStore.settings.workday(containing: block.start)?.end ?? day.end
         let result = BlockCascade.cascade(
             blocks: later.map { BlockCascade.Item(id: $0.id, interval: $0.interval) },
@@ -414,6 +423,7 @@ final class CalendarService {
                 let event = try saveEvent(blockID: draft.id, title: task.blockTitle, start: draft.start, end: draft.end)
                 draft.eventIdentifier = event.eventIdentifier
                 draft.stateRaw = BlockState.confirmed.rawValue
+                reopenIfDone(task)
                 try commit(removingOnFailure: event)
             }
             return notPlaced
@@ -421,6 +431,11 @@ final class CalendarService {
         guard let skipped, !skipped.isEmpty else { return }
         let names = skipped.map { "«\($0.task?.title ?? "")» (\(PlannerFormat.dayMonth($0.start)) · \(PlannerFormat.timeRange($0.start, $0.end)))" }
         otherErrorMessage = "Estos bloques propuestos ya no tienen espacio libre y siguen como propuestas: " + names.joined(separator: ", ") + "."
+    }
+
+    /// A new block for a done task brings it back to todo, without the reopened mark.
+    private func reopenIfDone(_ task: PlannerTask) {
+        if task.status == .done { task.status = .todo }
     }
 
     func discardDrafts(_ drafts: [Block]) {

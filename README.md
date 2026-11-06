@@ -4,14 +4,15 @@ Blockout is a free (GPL-3.0) time-blocking planner for macOS. You keep your task
 
 ## Features
 
-- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Completed tasks are hidden; the check icon above the input shows them (uncheck one to reopen it). A task that an automation reopens through the MCP shows a "Reabierto" badge (hover it for the date) until it is completed again. Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
+- **Tasks and projects** with native fields: urgency (`!`, `!!`, `!!!`), estimate, due date, status, notes, source and an external reference link. Completed tasks are hidden; the check icon above the input shows them (uncheck one to reopen it). Completing a task keeps all its blocks: the ones that have started become locked (translucent, dashed outline and a check mark, "Completado" in the legend) and cannot be moved or resized, only deleted; future blocks stay editable. Creating a new block for a completed task reopens it to "Por hacer". A task that an automation reopens through the MCP shows a "Reabierto" badge (hover it for the date) until it is completed again. Right-click a task to open it, change its urgency or delete it (with confirmation; its blocks and calendar events are deleted too). Create projects with "+" next to Proyectos; right-click a project › Editar… to change its name or color.
 - **One input to filter and create**: typing filters the list; Enter creates a task. A trailing `2h` sets the estimate, a trailing `!!` sets the urgency, and an existing project name in the text assigns the project.
+- **Quick-add bar**: a global shortcut (default ⌃⌥⇧⌘T, what a "Hyper" key sends with T) opens a floating input over any app, even with the Blockout window closed. It reads the text like the list input, creates the task on Enter and returns you to the previous app; Esc or clicking outside closes it. Change or remove the shortcut in Settings › Atajos.
 - **Sidebar filters**: Todas, Hoy (tasks with a block today), Sin agendar, Agendadas, Vencidas, Reabiertas, Completadas, plus one filter per project and per source.
 - **Calendar** in Día, Días (2 to 7), Semana and Mes views, showing the macOS calendars you choose, the free time per day and a red current-time line.
-- **Blocks are real events**: dropping a task creates an event in the destination calendar at once, titled "[Proyecto] Título" (the task keeps its own title). Renaming the task or its project updates all its events. Move, resize, Option-drag to duplicate, or drag back to the list to unschedule. Changes made in Calendar or on the web are reflected back.
+- **Blocks are real events**: dropping a task creates an event in the destination calendar at once, titled "[Proyecto] Título" (the task keeps its own title). Renaming the task or its project updates all its events. Move, resize, Option-drag to duplicate, or drag back to the list to unschedule. Changes made in Calendar or on the web are reflected back. "+ Agendar sesión" in the task detail books one block of the default length in the first free slot from the next quarter hour today, or in the following working days (up to two weeks); it works on done tasks too and reopens them to "Por hacer".
 - **Local MCP server** for AI agents and automations (for example Claude or your own scripts) to read and change projects, tasks, the schedule and blocks.
 - **Draft plans**: an agent can propose blocks; they appear hatched with a banner to accept or discard all, or one by one. Nothing reaches the calendar until you accept.
-- **Time tracking**: when a block starts, a notification asks "¿Estás trabajando en esto?" and starts a timer. When a block you are timing reaches its end, another notification asks "¿Terminaste esta tarea?" with "Terminada" and "+15 min". The menu bar shows the running time and a native menu with Completar, +15 min, Pausar and Detener, and the rest of the day. "+15 min" extends the current block and moves the following blocks around your meetings; blocks that no longer fit return to "Sin agendar". Recorded time is editable in each task.
+- **Time tracking**: start the timer from the menu bar or the task detail. Blockout sends no notifications. The menu bar shows the running time and a native menu with Completar, +15 min, Pausar and Detener, and the rest of the day. "+15 min" extends the current block and moves the following blocks around your meetings; blocks that no longer fit return to "Sin agendar". Recorded time is editable in each task. AI agents can record their own work sessions through the MCP; entries may overlap (parallel sessions count fully) and show their note and origin in the task.
 - Light and dark appearance following the system.
 
 ## Requirements
@@ -71,8 +72,6 @@ Maintainers: keep a backup of the `.p12` (before deleting it) in a safe place. I
 
 On first launch Blockout asks for full access to your calendars. If you deny it, tasks keep working and the calendar area offers a button to open System Settings › Privacy & Security › Calendars.
 
-It also asks to send notifications, used for the block start and end prompts. Without that permission, the menu bar menu shows "Notificaciones desactivadas" with a shortcut to System Settings, and the prompts appear only in the menu. Permission granted later applies without restarting the app.
-
 Closing the window keeps Blockout running in the menu bar (the timer and the MCP server need it). Quit with ⌘Q.
 
 ## Key concepts
@@ -101,9 +100,11 @@ While Blockout is open, it serves the Model Context Protocol at `http://127.0.0.
 | `create_task`, `update_task` | Every task field, including `external_ref {label, id, url}`. Create returns the existing task for an open task with the same title or any task with the same external reference, unless `allow_duplicate` is true. `update_task` also accepts `reopened` (true marks an open task as reopened; false or null removes the mark), and every task in tool output includes `reopened_at`. |
 | `delete_task`, `delete_block` | Without `confirm: true` they only return what would be deleted. |
 | `get_schedule` | Events, blocks, drafts, working hours and free time for up to 31 days. |
-| `schedule_task`, `update_block` | Create or change a block and its calendar event at once; a busy start moves to the next free slot. |
+| `schedule_task`, `update_block` | Create or change a block and its calendar event at once; a busy start moves to the next free slot. Scheduling a done task reopens it; `update_block` rejects locked blocks (every block in output has `locked`). |
 | `propose_blocks` | Create draft blocks for review; items that do not fit are rejected with a reason. A new proposal replaces the previous drafts. |
-| `list_time_entries` | Recorded time between two dates, with task, project, source and external reference, for time reports. Blockout has no report view: ask an agent for weekly totals. |
+| `list_time_entries` | Recorded time between two dates, with task, project, source and external reference, plus `key`, `note` and `origin` for agent entries, for time reports. Blockout has no report view: ask an agent for weekly totals. |
+| `upsert_time_entry` | An agent records a closed entry (`key`, `task_id`, `start`, `end`, optional `note` and `origin`). Sending the same key again replaces the entry (extend, correct or move it to another task). Never affects the running timer. |
+| `delete_time_entry` | Deletes the entry with a `key`; without `confirm: true` it only returns what would be deleted. |
 
 Example:
 
@@ -128,9 +129,14 @@ The plan lives in `openspec/changes/`, in four stages plus later changes:
 
 1. `add-planner-core`: tasks, projects and the calendar planner (implemented, pending manual verification).
 2. `add-mcp-server`: local MCP server for AI agents and automations, and draft plans to accept or discard (implemented, pending manual verification).
-3. `add-time-tracking`: start prompts, a timer in the menu bar and editable time entries (implemented, pending manual verification).
+3. `add-time-tracking`: a timer in the menu bar and editable time entries (implemented, pending manual verification).
 4. `add-public-release`: signed DMG releases on GitHub and in-app updates (released as 1.0.0).
 5. `add-reopened-badge`: "Reabierto" badge and "Reabiertas" filter for tasks that an automation reopens through the MCP (released as 1.0.6).
+6. `add-agent-time-entries`: agents record, extend and delete their own time entries through the MCP (implemented, pending manual verification).
+7. `add-schedule-session`: "+ Agendar sesión" replaces "+ Agendar las horas restantes" in the task detail (implemented, pending manual verification).
+8. `add-quick-add-hotkey`: global shortcut and floating quick-add bar, configurable in Settings › Atajos (implemented, pending manual verification).
+9. `remove-block-prompts`: block start and end notifications removed; leftovers are cleared at launch (implemented, pending manual verification).
+10. `keep-completed-task-blocks`: completing a task keeps its blocks and locks the started ones; new blocks reopen it (implemented, pending manual verification).
 
 ## Roadmap
 

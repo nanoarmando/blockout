@@ -28,6 +28,8 @@ struct AppSettings: Codable, Equatable {
     var defaultBlockLength = DefaultBlockLength.sixtyMinutes
     var mcpEnabled = true
     var mcpPort = MCPServer.defaultPort
+    /// Global shortcut of the quick-add bar; `nil` disables it.
+    var newTaskShortcut: KeyShortcut? = .defaultNewTask
 
     /// Length of a new block: the setting decides; the estimate is only used with "según la estimación".
     func blockMinutes(for task: PlannerTask) -> Int {
@@ -59,6 +61,29 @@ extension AppSettings {
         defaultBlockLength = try container.decodeIfPresent(DefaultBlockLength.self, forKey: .defaultBlockLength) ?? defaultBlockLength
         mcpEnabled = try container.decodeIfPresent(Bool.self, forKey: .mcpEnabled) ?? mcpEnabled
         mcpPort = try container.decodeIfPresent(Int.self, forKey: .mcpPort) ?? mcpPort
+        // A stored null means disabled; only a missing key gets the default
+        if container.contains(.newTaskShortcut) {
+            newTaskShortcut = try container.decodeIfPresent(KeyShortcut.self, forKey: .newTaskShortcut)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case destinationCalendarID, blocksShowAsBusy, readCalendarIDs, workdayStartMinutes, workdayEndMinutes
+        case defaultBlockLength, mcpEnabled, mcpPort, newTaskShortcut
+    }
+
+    /// Writes `newTaskShortcut` as null when disabled, so the decoder can tell it from a missing key.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(destinationCalendarID, forKey: .destinationCalendarID)
+        try container.encode(blocksShowAsBusy, forKey: .blocksShowAsBusy)
+        try container.encodeIfPresent(readCalendarIDs, forKey: .readCalendarIDs)
+        try container.encode(workdayStartMinutes, forKey: .workdayStartMinutes)
+        try container.encode(workdayEndMinutes, forKey: .workdayEndMinutes)
+        try container.encode(defaultBlockLength, forKey: .defaultBlockLength)
+        try container.encode(mcpEnabled, forKey: .mcpEnabled)
+        try container.encode(mcpPort, forKey: .mcpPort)
+        try container.encode(newTaskShortcut, forKey: .newTaskShortcut)
     }
 }
 

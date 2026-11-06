@@ -19,7 +19,7 @@ extension MCPTools {
         ),
         tool(
             "list_tasks",
-            "List tasks, newest first. By default only open tasks (not done). Each task has id, title, project, urgency (0 none to 3 high), estimate_hours, due_date (YYYY-MM-DD), status, notes, source, external_ref {label, id, url}, blocks and drafts with start and end, scheduled (\"today\", \"later\" or null), and reopened_at (when an agent last marked the task as reopened, or null).",
+            "List tasks, newest first. By default only open tasks (not done). Each task has id, title, project, urgency (0 none to 3 high), estimate_hours, due_date (YYYY-MM-DD), status, notes, source, external_ref {label, id, url}, blocks (with start, end and locked) and drafts with start and end, scheduled (\"today\", \"later\" or null), and reopened_at (when an agent last marked the task as reopened, or null).",
             properties: [
                 "status": statusSchema,
                 "project": string("Project id or name (case-insensitive)."),
@@ -37,7 +37,7 @@ extension MCPTools {
         ),
         tool(
             "update_task",
-            "Update fields of a task. Only the given fields change; pass null to clear project, estimate_hours, due_date, notes, source or external_ref. Setting status to done follows the app rule: blocks that have not started yet are deleted with their calendar events and the reopened mark is removed.",
+            "Update fields of a task. Only the given fields change; pass null to clear project, estimate_hours, due_date, notes, source or external_ref. Setting status to done follows the app rule: every block and its calendar event is kept, blocks that have started are locked (locked: true, they cannot be moved or resized), drafts of the task are deleted and the reopened mark is removed.",
             properties: taskProperties.merging([
                 "id": string("Task id."),
                 "title": string("New title."),
@@ -61,7 +61,7 @@ extension MCPTools {
         ),
         tool(
             "schedule_task",
-            "Create a block for a task and write its busy event to the calendar immediately, like dragging the task to the calendar: if the start is taken, the block moves to the next free slot of that day within working hours (moved: true). Fails when nothing fits. Use propose_blocks instead when the user should review the plan first.",
+            "Create a block for a task and write its busy event to the calendar immediately, like dragging the task to the calendar: if the start is taken, the block moves to the next free slot of that day within working hours (moved: true). Fails when nothing fits. Scheduling a done task reopens it to todo (without the reopened mark). Use propose_blocks instead when the user should review the plan first.",
             properties: [
                 "task_id": string("Task id."),
                 "start": dateTime("Desired start."),
@@ -71,7 +71,7 @@ extension MCPTools {
         ),
         tool(
             "update_block",
-            "Move or resize a block (or a draft). Moving an existing block may overlap other items, as in the app. The calendar event is updated.",
+            "Move or resize a block (or a draft). Moving an existing block may overlap other items, as in the app. The calendar event is updated. Locked blocks (worked blocks of completed tasks) are rejected; they can still be deleted with delete_block.",
             properties: [
                 "id": string("Block id."),
                 "start": dateTime("New start."),
@@ -103,12 +103,31 @@ extension MCPTools {
         ),
         tool(
             "list_time_entries",
-            "List the time entries recorded with the timer or by hand whose start falls between two days (inclusive), ordered by start, for time reports grouped by day and ticket. Each entry has id, start, end (null while the timer runs), running, minutes, task_id, title, project, source and external_ref {label, id, url}.",
+            "List the time entries recorded with the timer, by hand or by agents whose start falls between two days (inclusive), ordered by start, for time reports grouped by day and ticket. Entries may overlap. Each entry has id, start, end (null while the timer runs), running, minutes, task_id, title, project, source (the task's source label) and external_ref {label, id, url}, plus key, note and origin (null unless written with upsert_time_entry).",
             properties: [
                 "from": string("First day, YYYY-MM-DD."),
                 "to": string("Last day, YYYY-MM-DD, inclusive. Default: the same as from."),
             ],
             required: ["from"]
+        ),
+        tool(
+            "upsert_time_entry",
+            "Record a closed time entry on a task, identified by a key you choose. When an entry with that key exists, every field is replaced (extend it, correct its range or move it to another task); omitted note and origin are cleared. Entries may overlap and never affect the running timer. Returns entry and created.",
+            properties: [
+                "key": string("Unique key chosen by the agent, e.g. a session id plus a segment number."),
+                "task_id": string("Task id."),
+                "start": dateTime("Start."),
+                "end": dateTime("End, not before start."),
+                "note": string("What was done."),
+                "origin": string("Who recorded it, e.g. the agent name."),
+            ],
+            required: ["key", "task_id", "start", "end"]
+        ),
+        tool(
+            "delete_time_entry",
+            "Delete the time entry with a key. Without confirm: true it only returns the entry that would be deleted.",
+            properties: ["key": string("Entry key."), "confirm": confirmSchema],
+            required: ["key"]
         ),
     ]
 
