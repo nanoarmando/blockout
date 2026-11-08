@@ -62,8 +62,33 @@ final class DragState {
         }
     }
 
+    /// Range navigation while the pointer rests on the left or right edge of the time grid; set by `MainView`.
+    var onEdgeStep: ((Int) -> Void)?
+    private(set) var edge: HorizontalEdge?
+    private var edgeTask: Task<Void, Never>?
+
+    /// Arms (or clears with `nil`) the repeating edge step. The timer repeats on its own because SwiftUI stops
+    /// calling `dropUpdated` while the pointer rests.
+    func setEdge(_ newEdge: HorizontalEdge?) {
+        guard newEdge != edge else { return }
+        edge = newEdge
+        edgeTask?.cancel()
+        edgeTask = nil
+        guard let newEdge else { return }
+        let direction = newEdge == .leading ? -1 : 1
+        edgeTask = Task { [weak self] in
+            while true {
+                try? await Task.sleep(for: .seconds(0.8))
+                guard !Task.isCancelled, let self else { return }
+                preview = nil
+                onEdgeStep?(direction)
+            }
+        }
+    }
+
     func finish() {
         payload = nil
         preview = nil
+        setEdge(nil)
     }
 }

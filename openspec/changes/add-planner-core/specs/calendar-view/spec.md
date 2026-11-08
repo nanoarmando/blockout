@@ -5,6 +5,8 @@ Shows the user's real calendar events and Blockout blocks together over a chosen
 ## ADDED Requirements
 
 ### Requirement: View modes
+> Superseded by `improve-calendar-navigation` ("Three view modes"): Días was removed and Semana shows Monday to Sunday.
+
 The calendar SHALL offer the views Día (today), Días (N consecutive days starting today, where N from 2 to 7 is chosen in a popup that opens from the "Días" control), Semana (Monday to Friday of the current week) and Mes (the current month grid). The control SHALL show the chosen number of days, for example "3 días". Previous, next and "Hoy" controls SHALL move the range and return to the range containing today. The title SHALL show the visible range.
 
 #### Scenario: Choosing three days

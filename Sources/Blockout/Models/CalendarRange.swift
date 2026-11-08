@@ -1,13 +1,12 @@
 import Foundation
 
 enum CalendarMode: Equatable {
-    case day, days, week, month
+    case day, week, month
 }
 
 /// The visible calendar range: the mode plus an anchor day that navigation moves.
 struct CalendarRange: Equatable {
     var mode = CalendarMode.week
-    var dayCount = 3
     var anchor = Calendar.planner.startOfDay(for: .now)
 
     private var calendar: Calendar { .planner }
@@ -16,8 +15,7 @@ struct CalendarRange: Equatable {
     var days: [Date] {
         switch mode {
         case .day: [anchor]
-        case .days: dates(from: anchor, count: dayCount)
-        case .week: dates(from: startOfWeek(anchor), count: 5)
+        case .week: dates(from: startOfWeek(anchor), count: 7)
         case .month: []
         }
     }
@@ -47,7 +45,6 @@ struct CalendarRange: Equatable {
     mutating func step(_ direction: Int) {
         let (component, value): (Calendar.Component, Int) = switch mode {
         case .day: (.day, 1)
-        case .days: (.day, dayCount)
         case .week: (.weekOfYear, 1)
         case .month: (.month, 1)
         }

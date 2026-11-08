@@ -193,9 +193,21 @@ final class CalendarService {
         perform { try insertBlock(for: task, start: start, end: end) } != nil
     }
 
+    /// With an `undoManager`, ⌘Z restores the previous range; only the last block change is kept and there is no redo.
     @discardableResult
-    func moveBlock(_ block: Block, start: Date, end: Date) -> Bool {
-        perform { try updateBlock(block, start: start, end: end) } != nil
+    func moveBlock(_ block: Block, start: Date, end: Date, undoManager: UndoManager? = nil) -> Bool {
+        let (oldStart, oldEnd) = (block.start, block.end)
+        guard perform({ try updateBlock(block, start: start, end: end) }) != nil else { return false }
+        if let undoManager {
+            undoManager.removeAllActions(withTarget: self)
+            undoManager.registerUndo(withTarget: self) { service in
+                // A block deleted or locked since then no longer applies
+                guard block.modelContext != nil, !block.isDeleted, !block.locked else { return }
+                service.moveBlock(block, start: oldStart, end: oldEnd)
+            }
+            undoManager.setActionName("Mover bloque")
+        }
+        return true
     }
 
     @discardableResult

@@ -8,6 +8,7 @@ struct MainView: View {
 
     @Environment(CalendarService.self) private var calendarService
     @Environment(SettingsStore.self) private var settingsStore
+    @Environment(DragState.self) private var dragState
     @Environment(\.openSettings) private var openSettings
 
     @State private var filter = TaskFilter.all
@@ -39,6 +40,10 @@ struct MainView: View {
         .background(Theme.background)
         .foregroundStyle(Theme.ink)
         .frame(minWidth: 1180, minHeight: 640)
+        .onAppear {
+            // Only the time grid (Día, Semana) has drop targets, so only it reports edges
+            dragState.onEdgeStep = { [$range] direction in $range.wrappedValue.step(direction) }
+        }
         .task(id: EventsKey(range: range.fetchInterval, revision: calendarService.revision, settings: settingsStore.settings, hasAccess: calendarService.hasAccess)) {
             events = calendarService.events(in: range.fetchInterval)
         }
@@ -93,6 +98,7 @@ struct MainView: View {
         .padding(.top, 16)
         .padding(.bottom, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(SwipeNavigator { range.step($0) })
     }
 
     private var legend: some View {
@@ -129,10 +135,9 @@ private struct EventsKey: Equatable {
     let hasAccess: Bool
 }
 
-/// Navigation, range title and the Día / Días / Semana / Mes control.
+/// Navigation, range title and the Día / Semana / Mes control.
 private struct CalendarHeader: View {
     @Binding var range: CalendarRange
-    @State private var showsDayCount = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -151,8 +156,6 @@ private struct CalendarHeader: View {
             Spacer()
             HStack(spacing: 0) {
                 segment("Día", mode: .day) { range.mode = .day }
-                segment(range.mode == .days ? "\(range.dayCount) días ▾" : "Días ▾", mode: .days) { showsDayCount.toggle() }
-                    .popover(isPresented: $showsDayCount, arrowEdge: .bottom) { dayCountPicker }
                 segment("Semana", mode: .week) { range.mode = .week }
                 segment("Mes", mode: .month) { range.mode = .month }
             }
@@ -183,26 +186,6 @@ private struct CalendarHeader: View {
     private func segment(_ title: String, mode: CalendarMode, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
             .buttonStyle(ToggleButtonStyle(isSelected: range.mode == mode, height: 36, bordered: false))
-    }
-
-    private var dayCountPicker: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Cantidad de días desde hoy").font(.system(size: 13)).foregroundStyle(Theme.secondary)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                ForEach(2...7, id: \.self) { count in
-                    let isSelected = range.mode == .days && range.dayCount == count
-                    Button("\(count)") {
-                        range.mode = .days
-                        range.dayCount = count
-                        range.goToToday()
-                        showsDayCount = false
-                    }
-                    .buttonStyle(ToggleButtonStyle(isSelected: isSelected, height: 40))
-                }
-            }
-        }
-        .padding(12)
-        .frame(width: 220)
     }
 }
 

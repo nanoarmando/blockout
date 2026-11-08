@@ -36,11 +36,14 @@ struct AppSettings: Codable, Equatable {
         defaultBlockLength == .fromEstimate ? task.estimateMinutes ?? defaultBlockLength.minutes : defaultBlockLength.minutes
     }
 
-    /// Working interval of a day, or `nil` on weekends.
+    /// Working interval of a day, or `nil` on weekends (automatic scheduling skips them).
     func workday(containing day: Date) -> DateInterval? {
-        let calendar = Calendar.planner
-        guard !calendar.isDateInWeekend(day) else { return nil }
-        let start = calendar.startOfDay(for: day)
+        Calendar.planner.isDateInWeekend(day) ? nil : workingHours(on: day)
+    }
+
+    /// Working hours of any day, weekends included (manual drops are allowed on weekends).
+    func workingHours(on day: Date) -> DateInterval {
+        let start = Calendar.planner.startOfDay(for: day)
         return DateInterval(
             start: start.addingTimeInterval(TimeInterval(workdayStartMinutes * 60)),
             end: start.addingTimeInterval(TimeInterval(workdayEndMinutes * 60))

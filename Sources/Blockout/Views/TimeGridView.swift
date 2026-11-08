@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Día, Días and Semana: day columns over the working hours with events, blocks, free time and the now line.
+/// Día and Semana: day columns over the working hours with events, blocks, free time and the now line.
 struct TimeGridView: View {
     let days: [Date]
     let events: [CalendarEvent]
@@ -46,7 +46,9 @@ struct TimeGridView: View {
                             drafts: drafts.filter { Calendar.planner.isDate($0.start, inSameDayAs: day) },
                             tasks: tasks,
                             allBlocks: blocks,
-                            openTask: openTask
+                            openTask: openTask,
+                            isFirst: day == days.first,
+                            isLast: day == days.last
                         )
                     }
                 }
@@ -143,9 +145,15 @@ private struct DayColumn: View {
     let tasks: [PlannerTask]
     let allBlocks: [Block]
     let openTask: (PlannerTask) -> Void
+    /// The first and last columns host the edge zones that step the range while dragging.
+    let isFirst: Bool
+    let isLast: Bool
+
+    @State private var width: CGFloat = 0
 
     @Environment(SettingsStore.self) private var settingsStore
     @Environment(CalendarService.self) private var calendarService
+    @Environment(\.undoManager) private var undoManager
     @Environment(DragState.self) private var dragState
 
     @Environment(\.hourHeight) private var hourHeight
@@ -189,6 +197,7 @@ private struct DayColumn: View {
         }
         .frame(height: height)
         .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .overlay(alignment: .leading) { Theme.lineSoft.frame(width: 1) }
         .contentShape(Rectangle())
         .onDrop(of: [.plainText], delegate: DayDropDelegate(column: self))
@@ -252,8 +261,8 @@ private struct DayColumn: View {
     func preview(at location: CGPoint) -> DropPreview? {
         switch dragState.payload {
         case .task(let id):
-            guard let task = tasks.first(where: { $0.id == id }),
-                  let workday = settingsStore.settings.workday(containing: day) else { return nil }
+            guard let task = tasks.first(where: { $0.id == id }) else { return nil }
+            let workday = settingsStore.settings.workingHours(on: day)
             // New blocks land exactly under the pointer; overlapping busy time is a conflict, not a shift
             let duration = TimeInterval(settingsStore.settings.blockMinutes(for: task) * 60)
             let start = max(snappedStart(at: location, duration: duration), workday.start)
@@ -285,20 +294,36 @@ private struct DayColumn: View {
             if NSEvent.modifierFlags.contains(.option), let task = block.task {
                 return calendarService.createBlock(for: task, start: preview.start, end: preview.end)
             }
-            return calendarService.moveBlock(block, start: preview.start, end: preview.end)
+            return calendarService.moveBlock(block, start: preview.start, end: preview.end, undoManager: undoManager)
         case nil:
             return false
         }
     }
 
     func updatePreview(at location: CGPoint) -> DropProposal {
+        dragState.setEdge(edge(at: location))
         let preview = preview(at: location)
         if dragState.preview != preview { dragState.preview = preview }
         guard let preview, !preview.conflict else { return DropProposal(operation: .forbidden) }
         return DropProposal(operation: NSEvent.modifierFlags.contains(.option) ? .copy : .move)
     }
 
+    /// The edge zone under the pointer; locked blocks and foreign drags never navigate.
+    private func edge(at location: CGPoint) -> HorizontalEdge? {
+        switch dragState.payload {
+        case .task: break
+        case .block(let id):
+            guard let block = allBlocks.first(where: { $0.id == id }), !block.locked else { return nil }
+        case nil: return nil
+        }
+        let zone: CGFloat = 30
+        if isFirst && location.x < zone { return .leading }
+        if isLast && location.x > width - zone { return .trailing }
+        return nil
+    }
+
     func clearPreview() {
+        dragState.setEdge(nil)
         if let preview = dragState.preview, Calendar.planner.isDate(preview.day, inSameDayAs: day) {
             dragState.preview = nil
         }
@@ -369,6 +394,7 @@ private struct BlockItem: View {
     let openTask: (PlannerTask) -> Void
 
     @Environment(CalendarService.self) private var calendarService
+    @Environment(\.undoManager) private var undoManager
     @Environment(DragState.self) private var dragState
     @Environment(\.hourHeight) private var hourHeight
     @State private var resizeMinutes = 0
@@ -428,7 +454,7 @@ private struct BlockItem: View {
                         let minutes = resizeMinutes
                         resizeMinutes = 0
                         guard minutes != 0 else { return }
-                        calendarService.moveBlock(block, start: block.start, end: block.end.addingTimeInterval(TimeInterval(minutes * 60)))
+                        calendarService.moveBlock(block, start: block.start, end: block.end.addingTimeInterval(TimeInterval(minutes * 60)), undoManager: undoManager)
                     }
             )
     }
@@ -526,4 +552,37 @@ private struct HatchPattern: View {
 extension EnvironmentValues {
     /// Height of one hour in the time grid, computed by `TimeGridView` from the visible height.
     @Entry var hourHeight: CGFloat = 44
+}
+
+private extension DragState {
+    /// Tasks and unlocked blocks may step the range from an edge; locked blocks and foreign drags never do.
+    func navigates(among blocks: [Block]) -> Bool {
+        switch payload {
+        case .task: true
+        case .block(let id): blocks.first(where: { $0.id == id }).map { !$0.locked } ?? false
+        case nil: false
+        }
+    }
+}
+
+/// The hour column never accepts drops; resting on it steps the range back.
+private struct HourColumnDropDelegate: DropDelegate {
+    let dragState: DragState
+    let blocks: [Block]
+
+    func validateDrop(info: DropInfo) -> Bool { info.hasItemsConforming(to: [.plainText]) }
+    func dropEntered(info: DropInfo) { dragState.load(from: info) }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        dragState.preview = nil
+        dragState.setEdge(dragState.navigates(among: blocks) ? .leading : nil)
+        return DropProposal(operation: .forbidden)
+    }
+
+    func dropExited(info: DropInfo) { dragState.setEdge(nil) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragState.finish()
+        return false
+    }
 }
